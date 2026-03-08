@@ -1,0 +1,147 @@
+{
+  "projectType": "saas",
+  "projectName": "Android Code Studio",
+  "projectDescription": "A full-featured IDE for developing Android applications directly on Android devices with Gradle support, language servers, and AI assistance.",
+  "theme": "aspen",
+  "primaryColor": "#242b2c",
+  "lightColor": "#040404",
+  "darkColor": "#6a6a6d",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/code-editor",
+              "features/project-management",
+              "features/gradle-build-system",
+              "features/language-servers",
+              "features/ui-designer",
+              "features/ai-agent"
+            ]
+          },
+          {
+            "group": "Development Tools",
+            "pages": [
+              "tools/terminal",
+              "tools/sdk-manager",
+              "tools/git-integration",
+              "tools/asset-studio",
+              "tools/log-reader"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/creating-projects",
+              "guides/building-apps",
+              "guides/debugging",
+              "guides/using-ai-agent",
+              "guides/environment-variables",
+              "guides/plugins"
+            ]
+          },
+          {
+            "group": "Language Support",
+            "pages": [
+              "languages/java",
+              "languages/kotlin",
+              "languages/xml"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/preferences",
+              "configuration/jdk-setup",
+              "configuration/sdk-ndk"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/architecture"
+            ]
+          },
+          {
+            "group": "Core APIs",
+            "pages": [
+              "api/editor-api",
+              "api/project-api",
+              "api/lsp-api",
+              "api/tooling-api"
+            ]
+          },
+          {
+            "group": "Extension Development",
+            "pages": [
+              "api/plugin-development",
+              "api/template-api",
+              "api/action-system"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Community",
+        "groups": [
+          {
+            "group": "Resources",
+            "pages": [
+              "community/contributing",
+              "community/support",
+              "community/faq"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Gradle-based Android project support (AGP 7.2.0+)",
+    "Integrated code editor with Java, Kotlin, and XML language servers",
+    "Visual UI designer with drag-and-drop interface",
+    "Project-aware AI agent for coding assistance",
+    "Built-in terminal with essential packages",
+    "Git integration for version control",
+    "SDK and NDK management",
+    "Real-time log reader for app debugging",
+    "Asset Studio for drawables and icons",
+    "JDK 11 and JDK 17 support",
+    "Custom environment variables for builds",
+    "Plugin creator for project sub-modules"
+  ],
+  "publicApiSurface": [
+    "IDEApplication - Main application class",
+    "EditorActivity - Code editor activity",
+    "MainActivity - Project management interface",
+    "GradleBuildService - Gradle build execution service",
+    "JavaLanguageServer - Java LSP implementation",
+    "KotlinLanguageServer - Kotlin LSP implementation",
+    "XMLLanguageServer - XML LSP implementation",
+    "UIDesigner - Visual layout designer",
+    "AIAgentManager - AI assistant manager",
+    "TermuxService - Terminal emulator service",
+    "ProjectManager - Project lifecycle management",
+    "AssetStudio - Drawable and icon generator",
+    "GitIntegration - Version control operations",
+    "LogReceiverService - Real-time log streaming",
+    "TemplateAPI - Project template system"
+  ]
+}
