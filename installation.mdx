@@ -78,34 +78,47 @@ Android Code Studio must be installed from trusted sources only. Only download t
     </Warning>
   </Step>
 
-  <Step title="Install Build Tools">
-    After launching the app for the first time, you need to install the Android build tools:
+  <Step title="Complete First-Time Setup Wizard">
+    After launching the app for the first time, Android Code Studio will guide you through a setup wizard:
     
-    1. Android Code Studio will display an onboarding screen
-    2. Follow the prompts to initialize the environment
-    3. The app will download and install required components:
-       - JDK 17 (Java Development Kit)
-       - Android SDK command-line tools
-       - Build tools and platform tools
-       - Essential packages for compilation
+    **Welcome Screen**
+    - Read the greeting and introduction to Android Code Studio
     
-    This process may take 10-30 minutes depending on your internet connection.
+    **Permissions Setup**
+    - Grant required storage permissions
+    - These permissions are essential for accessing project files
+    
+    **Configuration**
+    - Choose JDK installation (JDK 11 or JDK 17)
+    - Configure workspace directory (default: `/sdcard/AndroidCodeStudio/`)
+    - Optionally enable anonymous usage statistics
+    
+    **Build Tools Installation**
+    - The IDE will download and install required components:
+      - Java Development Kit (JDK 11 or 17)
+      - Android SDK command-line tools
+      - Build tools and platform tools
+      - Essential packages for compilation
+    - This process may take 10-30 minutes depending on your internet connection
+    
+    **License Acceptance**
+    - Review and accept Android SDK licenses
+    - These are required to use Android development tools
     
     <Tip>
     For detailed build tools setup instructions, visit the [official setup guide](https://docs.androidide.com/tutorials/get-started.html).
     </Tip>
   </Step>
 
-  <Step title="Complete Initial Setup">
-    After the build tools installation:
+  <Step title="Wait for Initialization">
+    After completing the wizard:
     
-    1. Configure your workspace directory (default is `/sdcard/AndroidCodeStudio/`)
-    2. Review and accept the licenses for Android SDK components
-    3. Wait for the IDE to initialize
-    4. The main screen will appear when setup is complete
+    1. The IDE will initialize all components
+    2. Wait for the environment to be fully configured
+    3. The main screen will appear when setup is complete
     
     <Note>
-    The first launch may take several minutes as the IDE initializes and configures all components.
+    The first launch may take several minutes as the IDE initializes and configures all components. Be patient and don't close the app during this process.
     </Note>
   </Step>
 </Steps>

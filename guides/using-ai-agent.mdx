@@ -240,6 +240,25 @@ data class ModificationAttempt(
 
 View history in **Tools → AI Agent → View Modifications**.
 
+### Review Changes Screen
+
+When the AI agent makes multiple file modifications, Android Code Studio presents a **Review Changes** interface:
+
+**Features:**
+- **File List** - See all files modified by the AI agent
+- **Diff Preview** - View changes side-by-side with syntax highlighting
+- **Selective Apply** - Choose which changes to accept or reject
+- **Summary** - Overview of all modifications in the current batch
+
+**Actions:**
+- **Apply All** - Accept all suggested changes
+- **Cancel** - Reject all changes and close the review screen
+- **Individual Review** - Select each file to review changes before applying
+
+<Note>
+Always review AI-generated code in this screen before applying changes. The agent may make assumptions or introduce errors that need correction.
+</Note>
+
 ### Undo Changes
 
 Revert unwanted changes:
