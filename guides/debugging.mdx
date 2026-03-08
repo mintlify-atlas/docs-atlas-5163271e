@@ -1,0 +1,562 @@
+---
+title: Debugging
+description: Learn how to debug Android applications in Android Code Studio
+icon: bug
+---
+
+Android Code Studio provides several tools to help you debug your applications, including log viewing, error tracking, and build diagnostics.
+
+## Build Output
+
+The primary debugging tool is the Build Output panel, which shows real-time build logs and errors.
+
+<Steps>
+  <Step title="Open Build Output">
+    Tap the **Build Output** tab at the bottom of the screen, or select **View → Tool Windows → Build Output**.
+  </Step>
+
+  <Step title="Monitor Logs">
+    During builds, all Gradle output streams to this panel:
+    
+    ```
+    > Task :app:compileDebugJavaWithJavac
+    > Task :app:mergeDebugResources
+    > Task :app:processDebugManifest
+    ```
+  </Step>
+
+  <Step title="Analyze Errors">
+    Build failures show detailed error information:
+    
+    ```
+    FAILURE: Build failed with an exception.
+    
+    * What went wrong:
+    Execution failed for task ':app:compileDebugKotlin'.
+    > Compilation error. See log for more details
+    
+    * Try:
+    Run with --stacktrace option to get the stack trace.
+    Run with --info or --debug option to get more log output.
+    ```
+  </Step>
+</Steps>
+
+## Code Editor Diagnostics
+
+The editor provides real-time error detection powered by language servers.
+
+### Java Language Server
+
+<Tabs>
+  <Tab title="Syntax Errors">
+    Red underlines indicate compilation errors:
+    
+    ```java
+    public class MainActivity extends AppCompatActivity {
+        @Override
+        protected void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            setContentView(R.layout.activity_main)
+            // Missing semicolon - red underline
+        }
+    }
+    ```
+    
+    Tap the error to see details and quick fixes.
+  </Tab>
+
+  <Tab title="Warnings">
+    Yellow underlines show warnings:
+    
+    ```java
+    String unused = "This variable is never used"; // Warning
+    ```
+  </Tab>
+
+  <Tab title="Code Actions">
+    Use **Code → Show Code Actions** or long-press to see:
+    - Quick fixes
+    - Refactoring options
+    - Import suggestions
+  </Tab>
+</Tabs>
+
+### XML Diagnostics
+
+Layout and resource files show validation errors:
+
+```xml
+<!-- Missing closing tag - error -->
+<LinearLayout>
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+<!-- Missing </LinearLayout> -->
+```
+
+### Problems Panel
+
+View all project errors in one place:
+
+1. Open **View → Tool Windows → Problems**
+2. See categorized issues:
+   - **Errors** - Must be fixed before building
+   - **Warnings** - Should be addressed
+   - **Info** - Suggestions and tips
+
+## Logging System
+
+Android Code Studio includes a powerful logging system for runtime debugging.
+
+### LogSender Integration
+
+For debug builds, the IDE automatically injects a logging plugin:
+
+```kotlin title="GradleBuildService.kt:306-314"
+private fun injectLoggerForCurrentBuild() {
+    val initScript = createLoggerInitScript()
+    System.setProperty("ide.logger.init.script", initScript.absolutePath)
+}
+```
+
+This enables real-time log streaming from your app to the IDE.
+
+### Log Reader
+
+View application logs:
+
+<Steps>
+  <Step title="Enable LogSender">
+    Go to **Settings → Developer Options** and enable **LogSender**.
+  </Step>
+
+  <Step title="Build Debug APK">
+    The logger plugin is automatically included:
+    
+    ```kotlin title="GradleBuildService.kt:237-253"
+    allprojects {
+        afterEvaluate {
+            if (plugins.hasPlugin('com.android.application')) {
+                dependencies {
+                    implementation files('${getLoggerRuntimeAar().absolutePath}')
+                    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+                }
+            }
+        }
+    }
+    ```
+  </Step>
+
+  <Step title="Install and Run">
+    Install your debug APK and run the app.
+  </Step>
+
+  <Step title="View Logs">
+    Logs appear in the Log Reader panel in real-time.
+  </Step>
+</Steps>
+
+### Log Levels
+
+Add logging to your code:
+
+```kotlin
+import android.util.Log
+
+class MainActivity : AppCompatActivity() {
+    companion object {
+        private const val TAG = "MainActivity"
+    }
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        Log.v(TAG, "Verbose: Detailed information")
+        Log.d(TAG, "Debug: Debugging information")
+        Log.i(TAG, "Info: General information")
+        Log.w(TAG, "Warning: Warning messages")
+        Log.e(TAG, "Error: Error messages")
+    }
+}
+```
+
+### Log Filtering
+
+Filter logs by:
+- **Level** - Verbose, Debug, Info, Warning, Error
+- **Tag** - Your TAG constant
+- **Package** - Your app's package name
+- **PID** - Process ID
+
+## Terminal Debugging
+
+Use the integrated Terminal for command-line debugging.
+
+### ADB Commands
+
+<CodeGroup>
+  ```bash List Devices
+  adb devices
+  ```
+
+  ```bash Logcat
+  adb logcat
+  ```
+
+  ```bash Filtered Logs
+  adb logcat | grep MyApp
+  ```
+
+  ```bash Clear Logs
+  adb logcat -c
+  ```
+
+  ```bash App Info
+  adb shell dumpsys package com.example.myapp
+  ```
+
+  ```bash Activity Stack
+  adb shell dumpsys activity activities
+  ```
+</CodeGroup>
+
+### Gradle Diagnostics
+
+<CodeGroup>
+  ```bash Stacktrace
+  ./gradlew assembleDebug --stacktrace
+  ```
+
+  ```bash Info Logs
+  ./gradlew assembleDebug --info
+  ```
+
+  ```bash Debug Logs
+  ./gradlew assembleDebug --debug
+  ```
+
+  ```bash Scan
+  ./gradlew assembleDebug --scan
+  ```
+
+  ```bash Profile
+  ./gradlew assembleDebug --profile
+  ```
+</CodeGroup>
+
+## Resource Debugging
+
+Debug resource-related issues:
+
+### Resource Table
+
+The IDE maintains resource tables for auto-completion and validation:
+
+```kotlin title="AndroidModule.kt:263-286"
+suspend fun readResources() {
+    withStopWatch("Read resources for module : $path") {
+        val resourceFlow = flow {
+            emit(getFrameworkResourceTable())
+            emit(getResourceTable())
+            emit(getDependencyResourceTables())
+            emit(getApiVersions())
+            emit(getWidgetTable())
+        }
+        
+        jobs.toList().awaitAll()
+    }
+}
+```
+
+### Resource Validation
+
+Common resource errors:
+
+<AccordionGroup>
+  <Accordion title="Resource Not Found">
+    ```
+    error: resource string/app_name (aka com.example.myapp:string/app_name) not found.
+    ```
+    
+    **Fix:**
+    1. Check `res/values/strings.xml` for the resource
+    2. Ensure the resource name is correct
+    3. Run **File → Sync Project with Gradle Files**
+  </Accordion>
+
+  <Accordion title="Duplicate Resources">
+    ```
+    error: duplicate value for resource 'string/app_name' with config ''.
+    ```
+    
+    **Fix:**
+    Remove duplicate entries from your resource files.
+  </Accordion>
+
+  <Accordion title="Invalid Resource Name">
+    ```
+    error: invalid resource name 'App Name' - must be lowercase letters, numbers, or underscores.
+    ```
+    
+    **Fix:**
+    Use valid names: `app_name` instead of `App Name`.
+  </Accordion>
+</AccordionGroup>
+
+### Layout Inspector
+
+Debug layout issues:
+
+1. Open your XML layout
+2. Use the **Layout Preview** to visualize
+3. Check for:
+   - Missing constraints (ConstraintLayout)
+   - Incorrect dimensions
+   - Overlapping views
+   - Missing attributes
+
+## Dependency Debugging
+
+Debug dependency resolution issues:
+
+### View Dependencies
+
+```bash
+./gradlew :app:dependencies
+```
+
+This shows the full dependency tree:
+
+```
+compileDebugClasspath - Compile classpath for compilation 'debug' (target  (androidJvm)).
++--- org.jetbrains.kotlin:kotlin-stdlib:1.9.20
++--- androidx.appcompat:appcompat:1.6.1
+|    +--- androidx.core:core:1.10.0
+|    +--- androidx.activity:activity:1.7.0
+|    ...
+```
+
+### Resolve Conflicts
+
+Force specific versions:
+
+```kotlin title="app/build.gradle.kts"
+configurations.all {
+    resolutionStrategy {
+        force("androidx.core:core:1.10.0")
+    }
+}
+```
+
+## Build Cache Debugging
+
+Debug cache-related issues:
+
+### Clear Gradle Cache
+
+```bash
+# Clear all caches
+./gradlew clean
+rm -rf ~/.gradle/caches
+
+# Clear build directory
+rm -rf app/build
+
+# Rebuild
+./gradlew assembleDebug
+```
+
+### Build Cache Reports
+
+```bash
+./gradlew assembleDebug --build-cache --info
+```
+
+Look for cache hit/miss information in the output.
+
+## Memory Debugging
+
+Monitor and debug memory issues:
+
+### Heap Dumps
+
+If builds crash with OutOfMemoryError:
+
+```properties title="gradle.properties"
+# Increase heap size
+org.gradle.jvmargs=-Xmx768m -Dfile.encoding=UTF-8
+
+# Enable heap dumps on OOM
+org.gradle.jvmargs=-Xmx512m -XX:+HeapDumpOnOutOfMemoryError
+```
+
+### Memory Monitoring
+
+Check system memory:
+
+```bash
+# Available memory
+free -h
+
+# Process memory
+ps aux | grep gradle
+```
+
+## Project Sync Issues
+
+Debug project synchronization problems:
+
+<Steps>
+  <Step title="Check Build Files">
+    Ensure valid `build.gradle` syntax:
+    
+    ```kotlin
+    plugins {
+        id("com.android.application") // Check quotes and parentheses
+    }
+    ```
+  </Step>
+
+  <Step title="Verify Gradle Version">
+    Check `gradle/wrapper/gradle-wrapper.properties`:
+    
+    ```properties
+    distributionUrl=https\://services.gradle.org/distributions/gradle-8.2-bin.zip
+    ```
+  </Step>
+
+  <Step title="Validate AGP Version">
+    Ensure Android Gradle Plugin compatibility:
+    
+    ```kotlin title="build.gradle.kts"
+    plugins {
+        id("com.android.application") version "8.2.0" apply false
+    }
+    ```
+    
+    <Note>
+      Android Code Studio requires AGP 7.2.0 or newer.
+    </Note>
+  </Step>
+
+  <Step title="Force Sync">
+    **File → Sync Project with Gradle Files**
+  </Step>
+</Steps>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Build Stuck or Hanging">
+    **Solution:**
+    1. Cancel the build
+    2. Stop Gradle daemons:
+       ```bash
+       ./gradlew --stop
+       ```
+    3. Clear temp files:
+       ```bash
+       rm -rf $TMPDIR/gradle*
+       ```
+    4. Restart the build
+  </Accordion>
+
+  <Accordion title="Errors After Gradle Sync">
+    **Solution:**
+    1. Check the Build Output for specific errors
+    2. Verify all dependencies are available
+    3. Try offline mode if network is unstable:
+       ```bash
+       ./gradlew assembleDebug --offline
+       ```
+  </Accordion>
+
+  <Accordion title="Language Server Not Working">
+    **Solution:**
+    1. Close and reopen the file
+    2. Restart the IDE
+    3. Reinstall language servers from Settings
+  </Accordion>
+
+  <Accordion title="Generated Files Not Found">
+    **Solution:**
+    Generate sources manually:
+    ```bash
+    ./gradlew :app:generateDebugSources
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Debug Configuration
+
+Configure debug settings:
+
+```kotlin title="app/build.gradle.kts"
+android {
+    buildTypes {
+        debug {
+            isDebuggable = true
+            isMinifyEnabled = false
+            
+            // Custom debug flags
+            buildConfigField("Boolean", "DEBUG_MODE", "true")
+            resValue("string", "app_name_debug", "MyApp (Debug)")
+        }
+    }
+}
+```
+
+Access in code:
+
+```kotlin
+if (BuildConfig.DEBUG_MODE) {
+    Log.d(TAG, "Debug mode enabled")
+}
+```
+
+## Performance Profiling
+
+Profile build performance:
+
+```bash
+./gradlew assembleDebug --profile
+```
+
+This generates a profile report at:
+```
+build/reports/profile/profile-*.html
+```
+
+Open in a browser to see:
+- Task execution times
+- Configuration time
+- Dependency resolution time
+- Task dependencies
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Enable Logging Early" icon="terminal">
+    Add logging statements during development, not after encountering issues.
+  </Card>
+
+  <Card title="Use Descriptive Tags" icon="tag">
+    Use clear, consistent TAG names for easier log filtering.
+  </Card>
+
+  <Card title="Clean Builds" icon="broom">
+    When in doubt, run `./gradlew clean` before rebuilding.
+  </Card>
+
+  <Card title="Check Build Output" icon="file-lines">
+    Always review build logs for warnings and errors.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+- [Configure environment variables](/guides/environment-variables) for debugging
+- [Use the AI Agent](/guides/using-ai-agent) to help diagnose issues
+- [Optimize builds](/guides/building-apps#build-optimization) to reduce errors

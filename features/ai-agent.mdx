@@ -1,0 +1,723 @@
+---
+title: 'AI Agent'
+description: 'AI-powered code generation, completion, and intelligent assistance'
+icon: 'robot'
+---
+
+## Overview
+
+Android Code Studio features an advanced AI Agent system that provides intelligent code generation, real-time code completion, and context-aware assistance. The AI Agent integrates with multiple AI providers including OpenAI, Anthropic Claude, Google Gemini, DeepSeek, Grok, and local LLMs.
+
+## Architecture
+
+The AI system is built around a flexible agent architecture:
+
+<CardGroup cols={2}>
+  <Card title="AI Agent Interface" icon="brain">
+    Common interface for all AI providers
+  </Card>
+  <Card title="Agent Manager" icon="users-gear">
+    Manages agent lifecycle and switching
+  </Card>
+  <Card title="Code Completion Service" icon="code">
+    Real-time code suggestions
+  </Card>
+  <Card title="Project Awareness" icon="folder-tree">
+    Context-aware with project structure
+  </Card>
+</CardGroup>
+
+## AI Agent Interface
+
+The core `AIAgent` interface provides a unified API for all AI providers:
+
+```kotlin
+interface AIAgent {
+  val providerId: String
+  val providerName: String
+  
+  // Initialization
+  fun initialize(apiKey: String, context: Context)
+  fun reinitializeWithNewModel(apiKey: String, context: Context)
+  fun setContext(context: Context)
+  fun setProjectData(projectTreeResult: ProjectTreeResult)
+  fun clearConversation()
+  
+  // Code generation
+  suspend fun generateCode(
+    prompt: String,
+    context: String?,
+    language: String,
+    projectStructure: String?
+  ): Result<String>
+  
+  // Modification tracking
+  fun recordModification(
+    filePath: String, 
+    oldContent: String?, 
+    newContent: String, 
+    success: Boolean
+  )
+  fun undoLastModification(): Boolean
+  fun getModificationHistory(): List<ModificationAttempt>
+  
+  // Retry logic
+  fun resetAttemptCount()
+  fun incrementAttemptCount()
+  fun getCurrentAttemptCount(): Int
+  fun canRetry(): Boolean
+  
+  // File operations
+  fun writeFile(filePath: String, content: String): FileWriteResult
+  fun isInitialized(): Boolean
+}
+
+data class ModificationAttempt(
+  val timestamp: Long,
+  val filePath: String,
+  val previousContent: String?,
+  val newContent: String,
+  val attemptNumber: Int = 0,
+  val success: Boolean = false
+)
+```
+
+## Supported AI Providers
+
+<Tabs>
+  <Tab title="OpenAI">
+    ```kotlin
+    class OpenAI : AIAgent {
+      override val providerId = "openai"
+      override val providerName = "OpenAI GPT"
+      
+      // Models: GPT-4, GPT-4 Turbo, GPT-3.5 Turbo
+      private var client: OpenAIClient? = null
+      
+      override fun initialize(apiKey: String, context: Context) {
+        client = OpenAIClient(apiKey)
+      }
+      
+      override suspend fun generateCode(
+        prompt: String,
+        context: String?,
+        language: String,
+        projectStructure: String?
+      ): Result<String> {
+        return try {
+          val response = client?.chat(
+            messages = buildMessages(prompt, context, projectStructure),
+            model = "gpt-4-turbo"
+          )
+          Result.success(response?.content ?: "")
+        } catch (e: Exception) {
+          Result.failure(e)
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Anthropic Claude">
+    ```kotlin
+    class Anthropic : AIAgent {
+      override val providerId = "anthropic"
+      override val providerName = "Anthropic Claude"
+      
+      // Models: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku
+      private var client: AnthropicClient? = null
+      
+      override suspend fun generateCode(
+        prompt: String,
+        context: String?,
+        language: String,
+        projectStructure: String?
+      ): Result<String> {
+        return try {
+          val response = client?.messages(
+            messages = buildMessages(prompt, context),
+            model = "claude-3-5-sonnet-20241022",
+            maxTokens = 4096
+          )
+          Result.success(response?.content ?: "")
+        } catch (e: Exception) {
+          Result.failure(e)
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Google Gemini">
+    ```kotlin
+    class Gemini : AIAgent {
+      override val providerId = "google"
+      override val providerName = "Google Gemini"
+      
+      // Models: Gemini 1.5 Pro, Gemini 1.5 Flash
+      private var client: GeminiClient? = null
+      
+      override suspend fun generateCode(
+        prompt: String,
+        context: String?,
+        language: String,
+        projectStructure: String?
+      ): Result<String> {
+        return try {
+          val response = client?.generateContent(
+            prompt = buildPrompt(prompt, context, projectStructure),
+            model = "gemini-1.5-pro"
+          )
+          Result.success(response?.text ?: "")
+        } catch (e: Exception) {
+          Result.failure(e)
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="DeepSeek">
+    ```kotlin
+    class DeepSeek : AIAgent {
+      override val providerId = "deepseek"
+      override val providerName = "DeepSeek"
+      
+      // Specialized for code generation
+      private var client: DeepSeekClient? = null
+      
+      override suspend fun generateCode(
+        prompt: String,
+        context: String?,
+        language: String,
+        projectStructure: String?
+      ): Result<String> {
+        return try {
+          val response = client?.chat(
+            messages = buildMessages(prompt, context),
+            model = "deepseek-coder"
+          )
+          Result.success(response?.content ?: "")
+        } catch (e: Exception) {
+          Result.failure(e)
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Local LLM">
+    ```kotlin
+    class LocalLLM : AIAgent {
+      override val providerId = "local"
+      override val providerName = "Local LLM"
+      
+      // Run models locally on device
+      private var model: LocalModel? = null
+      
+      override fun initialize(apiKey: String, context: Context) {
+        // Load model from device storage
+        model = LocalModel.load(context, modelPath)
+      }
+      
+      override suspend fun generateCode(
+        prompt: String,
+        context: String?,
+        language: String,
+        projectStructure: String?
+      ): Result<String> {
+        return try {
+          val response = model?.generate(
+            prompt = buildPrompt(prompt, context),
+            maxTokens = 2048
+          )
+          Result.success(response ?: "")
+        } catch (e: Exception) {
+          Result.failure(e)
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## AI Agent Manager
+
+Manage multiple AI agents and switch between them:
+
+```kotlin
+class AIAgentManager(private val context: Context) {
+  private val agents = mutableMapOf<String, AIAgent>()
+  private var currentAgent: AIAgent? = null
+  
+  fun registerAgent(agent: AIAgent) {
+    agents[agent.providerId] = agent
+  }
+  
+  fun setCurrentAgent(providerId: String, apiKey: String) {
+    val agent = agents[providerId] ?: return
+    agent.initialize(apiKey, context)
+    currentAgent = agent
+  }
+  
+  fun getCurrentAgent(): AIAgent? = currentAgent
+  
+  suspend fun generateCode(
+    prompt: String,
+    language: String = "kotlin"
+  ): Result<String> {
+    val agent = currentAgent ?: return Result.failure(
+      IllegalStateException("No agent initialized")
+    )
+    
+    return agent.generateCode(
+      prompt = prompt,
+      context = getProjectContext(),
+      language = language,
+      projectStructure = getProjectStructure()
+    )
+  }
+}
+```
+
+### Agent Registry
+
+```kotlin
+object AIAgentRegistry {
+  private val agents = mutableMapOf<String, () -> AIAgent>()
+  
+  fun register(providerId: String, factory: () -> AIAgent) {
+    agents[providerId] = factory
+  }
+  
+  fun create(providerId: String): AIAgent? {
+    return agents[providerId]?.invoke()
+  }
+  
+  fun getAvailableProviders(): List<String> {
+    return agents.keys.toList()
+  }
+}
+
+// Register agents
+fun registerAgents() {
+  AIAgentRegistry.register("openai") { OpenAI() }
+  AIAgentRegistry.register("anthropic") { Anthropic() }
+  AIAgentRegistry.register("google") { Gemini() }
+  AIAgentRegistry.register("deepseek") { DeepSeek() }
+  AIAgentRegistry.register("grok") { Grok() }
+  AIAgentRegistry.register("local") { LocalLLM() }
+}
+```
+
+<Note>
+  The agent registry pattern allows easy addition of new AI providers without
+  modifying existing code.
+</Note>
+
+## Code Completion Service
+
+Real-time AI-powered code suggestions:
+
+```kotlin
+class AICodeCompletionService(
+  private val context: Context,
+  private val aiAgent: AIAgent
+) {
+  private val completionCache = mutableMapOf<String, CompletionResult>()
+  
+  data class CompletionResult(
+    val text: String,
+    val isMultiLine: Boolean,
+    val lineCount: Int
+  )
+  
+  suspend fun getSuggestion(
+    currentCode: String,
+    cursorPosition: Int,
+    language: String = "kotlin"
+  ): CompletionResult? = withContext(Dispatchers.IO) {
+    if (!aiAgent.isInitialized()) {
+      return@withContext null
+    }
+    
+    try {
+      val beforeCursor = currentCode.substring(
+        0, cursorPosition.coerceAtMost(currentCode.length)
+      )
+      val afterCursor = currentCode.substring(
+        cursorPosition.coerceAtMost(currentCode.length)
+      )
+      val lastLines = beforeCursor.lines().takeLast(20).joinToString("\n")
+      
+      // Check cache
+      val cacheKey = lastLines.takeLast(150)
+      if (completionCache.containsKey(cacheKey)) {
+        return@withContext completionCache[cacheKey]
+      }
+      
+      // Build prompt
+      val prompt = buildCompletionPrompt(
+        lastLines, 
+        afterCursor.lines().take(5).joinToString("\n"), 
+        language
+      )
+      
+      // Get AI suggestion
+      val result = aiAgent.generateCode(
+        prompt = prompt,
+        context = null,
+        language = language,
+        projectStructure = null
+      )
+      
+      result.fold(
+        onSuccess = { response ->
+          val completionResult = extractSuggestion(response)
+          if (completionResult != null && completionResult.text.isNotBlank()) {
+            completionCache[cacheKey] = completionResult
+            return@withContext completionResult
+          }
+          null
+        },
+        onFailure = { e ->
+          handleException(e)
+          null
+        }
+      )
+    } catch (e: Exception) {
+      handleException(e)
+      null
+    }
+  }
+  
+  private fun buildCompletionPrompt(
+    before: String,
+    after: String,
+    language: String
+  ): String {
+    return """
+      Complete the following $language code. Provide only the completion, 
+      no explanations.
+      
+      Code before cursor:
+      ```$language
+      $before
+      ```
+      
+      Code after cursor:
+      ```$language
+      $after
+      ```
+      
+      Completion:
+    """.trimIndent()
+  }
+}
+```
+
+### Completion UI
+
+```kotlin
+class CodeCompletionUI(private val editor: CodeEditor) {
+  private var suggestionView: SuggestionView? = null
+  
+  fun showSuggestion(completion: CompletionResult) {
+    suggestionView?.dismiss()
+    
+    suggestionView = SuggestionView(editor.context).apply {
+      setSuggestion(completion.text)
+      setOnAcceptListener {
+        insertCompletion(completion.text)
+      }
+      show(editor, editor.cursor.line, editor.cursor.column)
+    }
+  }
+  
+  fun hideSuggestion() {
+    suggestionView?.dismiss()
+    suggestionView = null
+  }
+  
+  private fun insertCompletion(text: String) {
+    editor.insertText(text, editor.cursor.line, editor.cursor.column)
+    hideSuggestion()
+  }
+}
+```
+
+<Accordion title="Completion Features">
+  The AI code completion provides:
+  
+  - **Single-line completions**: Quick suggestions for current line
+  - **Multi-line completions**: Complete functions, classes, blocks
+  - **Context-aware**: Uses surrounding code for better suggestions
+  - **Language-specific**: Tailored for Java, Kotlin, XML, etc.
+  - **Caching**: Fast repeat suggestions
+</Accordion>
+
+## Project Awareness
+
+The AI agent has full awareness of your project structure:
+
+```kotlin
+data class ProjectTreeResult(
+  val structure: String,
+  val files: List<FileInfo>,
+  val dependencies: List<Dependency>
+)
+
+data class FileInfo(
+  val path: String,
+  val type: FileType,
+  val size: Long,
+  val content: String?
+)
+
+// Set project context
+val projectTree = buildProjectTree(workspace)
+aiAgent.setProjectData(projectTree)
+
+// Generate code with project awareness
+val result = aiAgent.generateCode(
+  prompt = "Create a new Repository class for User data",
+  context = getCurrentFileContent(),
+  language = "kotlin",
+  projectStructure = projectTree.structure
+)
+```
+
+## Modification Tracking
+
+Track all AI-generated modifications with undo capability:
+
+```kotlin
+// Record modification
+aiAgent.recordModification(
+  filePath = file.path,
+  oldContent = originalContent,
+  newContent = modifiedContent,
+  success = true
+)
+
+// View history
+val history = aiAgent.getModificationHistory()
+history.forEach { attempt ->
+  println("File: ${attempt.filePath}")
+  println("Attempt: ${attempt.attemptNumber}")
+  println("Success: ${attempt.success}")
+  println("Time: ${Date(attempt.timestamp)}")
+}
+
+// Undo last modification
+if (aiAgent.undoLastModification()) {
+  println("Modification reverted")
+}
+```
+
+<Warning>
+  AI-generated code should always be reviewed before committing. The AI may
+  introduce bugs or not fully understand your requirements.
+</Warning>
+
+## Error Handling
+
+Handle AI service errors gracefully:
+
+```kotlin
+class AIExceptions {
+  class RateLimitException(message: String) : Exception(message)
+  class QuotaExceededException(message: String) : Exception(message)
+  class InsufficientBalanceException(message: String) : Exception(message)
+  class InvalidApiKeyException(message: String) : Exception(message)
+}
+
+private fun handleException(e: Throwable) {
+  when (e) {
+    is RateLimitException -> {
+      showError("Rate limit exceeded. Please wait and try again.")
+    }
+    is QuotaExceededException -> {
+      showError("API quota exceeded. Please check your plan.")
+    }
+    is InsufficientBalanceException -> {
+      showError("Insufficient balance. Please add credits.")
+    }
+    is InvalidApiKeyException -> {
+      showError("Invalid API key. Please check your settings.")
+    }
+    else -> {
+      showError("AI request failed: ${e.message}")
+    }
+  }
+}
+```
+
+## Retry Logic
+
+Automatic retry with backoff for failed requests:
+
+```kotlin
+suspend fun generateWithRetry(
+  prompt: String,
+  maxAttempts: Int = 3
+): Result<String> {
+  aiAgent.resetAttemptCount()
+  
+  repeat(maxAttempts) { attempt ->
+    if (!aiAgent.canRetry()) {
+      return Result.failure(
+        Exception("Maximum retry attempts reached")
+      )
+    }
+    
+    aiAgent.incrementAttemptCount()
+    
+    val result = aiAgent.generateCode(
+      prompt = prompt,
+      context = null,
+      language = "kotlin",
+      projectStructure = null
+    )
+    
+    if (result.isSuccess) {
+      return result
+    }
+    
+    // Exponential backoff
+    delay(1000L * (attempt + 1))
+  }
+  
+  return Result.failure(Exception("Failed after $maxAttempts attempts"))
+}
+```
+
+## Configuration Dialogs
+
+### Provider Switch Dialog
+
+```kotlin
+class ProviderSwitchDialog : DialogFragment() {
+  private val providers = listOf(
+    "openai" to "OpenAI GPT",
+    "anthropic" to "Anthropic Claude",
+    "google" to "Google Gemini",
+    "deepseek" to "DeepSeek",
+    "grok" to "Grok",
+    "local" to "Local LLM"
+  )
+  
+  override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+    return AlertDialog.Builder(requireContext())
+      .setTitle("Select AI Provider")
+      .setItems(providers.map { it.second }.toTypedArray()) { _, which ->
+        switchProvider(providers[which].first)
+      }
+      .create()
+  }
+}
+```
+
+### Permission Dialog
+
+```kotlin
+class AIPermissionDialog : DialogFragment() {
+  override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+    return AlertDialog.Builder(requireContext())
+      .setTitle("AI Features")
+      .setMessage(
+        "Enable AI-powered code completion and generation? "
+        + "This will send code snippets to the selected AI provider."
+      )
+      .setPositiveButton("Enable") { _, _ ->
+        enableAI()
+      }
+      .setNegativeButton("Cancel", null)
+      .create()
+  }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Review Generated Code" icon="eye">
+    Always review AI suggestions before accepting
+  </Card>
+  <Card title="Provide Context" icon="message">
+    Give detailed prompts with context for better results
+  </Card>
+  <Card title="Use Project Awareness" icon="folder-tree">
+    Enable project context for more accurate suggestions
+  </Card>
+  <Card title="Monitor API Usage" icon="chart-line">
+    Keep track of API calls and costs
+  </Card>
+</CardGroup>
+
+## Usage Examples
+
+<Tabs>
+  <Tab title="Generate Function">
+    ```kotlin
+    val prompt = """
+      Create a suspend function that fetches user data from a REST API.
+      - Function name: fetchUserData
+      - Parameter: userId (Int)
+      - Return type: Result<User>
+      - Use Retrofit for HTTP calls
+      - Handle errors properly
+    """.trimIndent()
+    
+    val result = aiAgent.generateCode(
+      prompt = prompt,
+      context = getCurrentFileContent(),
+      language = "kotlin",
+      projectStructure = null
+    )
+    
+    result.onSuccess { code ->
+      editor.insertText(code)
+    }
+    ```
+  </Tab>
+  <Tab title="Complete Code">
+    ```kotlin
+    // User types: "fun calculateTot"
+    // AI suggests:
+    val completion = completionService.getSuggestion(
+      currentCode = editor.text,
+      cursorPosition = editor.cursor.position,
+      language = "kotlin"
+    )
+    
+    // Shows: "al(items: List<Item>): Double = items.sumOf { it.price }"
+    ```
+  </Tab>
+  <Tab title="Fix Error">
+    ```kotlin
+    val prompt = """
+      Fix the following compilation error:
+      
+      Error: Type mismatch: inferred type is String but Int was expected
+      
+      Code:
+      ${editor.getSelectedText()}
+    """.trimIndent()
+    
+    val result = aiAgent.generateCode(
+      prompt = prompt,
+      context = editor.text,
+      language = "kotlin",
+      projectStructure = null
+    )
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  For best results, provide specific requirements and constraints in your
+  prompts. The more context you give, the better the AI can help.
+</Tip>
+
+## Related Features
+
+- [Code Editor](/features/code-editor) - Editor integration
+- [Language Servers](/features/language-servers) - Code intelligence
+- [Project Management](/features/project-management) - Project context

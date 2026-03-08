@@ -1,0 +1,638 @@
+---
+title: Plugin Development
+description: Guide to developing plugins and extensions for Android Code Studio
+---
+
+This guide covers best practices and patterns for developing plugins that extend Android Code Studio's functionality.
+
+## Plugin Architecture
+
+### Plugin Structure
+
+A typical plugin follows this structure:
+
+```
+my-plugin/
+├── src/
+│   └── main/
+│       ├── java/
+│       │   └── com/example/plugin/
+│       │       ├── MyPlugin.kt
+│       │       ├── MyLanguageServer.kt
+│       │       ├── MyActions.kt
+│       │       └── MyTemplates.kt
+│       └── resources/
+│           └── META-INF/
+│               └── services/
+│                   ├── com.tom.rv2ide.lsp.api.ILanguageServer
+│                   ├── com.tom.rv2ide.templates.ITemplateProvider
+│                   └── com.tom.rv2ide.actions.ActionItem
+└── build.gradle.kts
+```
+
+### Service Registration
+
+Plugins use Java's ServiceLoader pattern for registration. Create service files in `META-INF/services/`:
+
+**File**: `META-INF/services/com.tom.rv2ide.lsp.api.ILanguageServer`
+```
+com.example.plugin.MyLanguageServer
+```
+
+**File**: `META-INF/services/com.tom.rv2ide.templates.ITemplateProvider`
+```
+com.example.plugin.MyTemplateProvider
+```
+
+## Creating a Language Server Plugin
+
+### Basic Language Server
+
+Implement a language server for a custom language:
+
+```kotlin
+package com.example.plugin
+
+import com.tom.rv2ide.lsp.api.*
+import com.tom.rv2ide.lsp.models.*
+import com.tom.rv2ide.projects.IWorkspace
+import java.nio.file.Path
+
+class MyLanguageServer : ILanguageServer {
+  
+  override val serverId = "my-language-server"
+  override var client: ILanguageClient? = null
+  
+  private var workspace: IWorkspace? = null
+  private val indexer = CodeIndexer()
+  
+  override fun shutdown() {
+    indexer.clear()
+    workspace = null
+    client = null
+  }
+  
+  override fun connectClient(client: ILanguageClient?) {
+    this.client = client
+    client?.logMessage(1, "My Language Server connected")
+  }
+  
+  override fun setupWorkspace(workspace: IWorkspace) {
+    this.workspace = workspace
+    
+    // Index workspace
+    workspace.getSubProjects().forEach { project ->
+      indexer.indexProject(project)
+    }
+  }
+  
+  override fun applySettings(settings: IServerSettings?) {
+    // Apply user preferences
+    settings?.let {
+      configureFromSettings(it)
+    }
+  }
+  
+  override fun complete(params: CompletionParams?): CompletionResult {
+    if (params == null) return CompletionResult.EMPTY
+    
+    val items = indexer.getCompletions(
+      params.file,
+      params.position,
+      params.prefix
+    )
+    
+    return CompletionResult(items)
+  }
+  
+  override suspend fun findDefinition(
+    params: DefinitionParams
+  ): DefinitionResult {
+    val locations = indexer.findDefinition(
+      params.file,
+      params.position
+    )
+    return DefinitionResult(locations)
+  }
+  
+  override suspend fun findReferences(
+    params: ReferenceParams
+  ): ReferenceResult {
+    val locations = indexer.findReferences(
+      params.file,
+      params.position,
+      params.includeDeclaration
+    )
+    return ReferenceResult(locations)
+  }
+  
+  override suspend fun signatureHelp(
+    params: SignatureHelpParams
+  ): SignatureHelp {
+    return indexer.getSignatureHelp(
+      params.file,
+      params.position
+    )
+  }
+  
+  override suspend fun analyze(file: Path): DiagnosticResult {
+    val diagnostics = indexer.analyze(file)
+    
+    // Publish to client
+    client?.publishDiagnostics(file, diagnostics)
+    
+    return diagnostics
+  }
+  
+  override suspend fun expandSelection(
+    params: ExpandSelectionParams
+  ): Range {
+    return indexer.expandSelection(params.file, params.range)
+  }
+  
+  override fun formatCode(params: FormatCodeParams?): CodeFormatResult {
+    if (params == null) return CodeFormatResult(false, emptyList())
+    
+    val formatted = formatSource(params.content)
+    val edits = createTextEdits(params.content, formatted)
+    
+    return CodeFormatResult(true, edits)
+  }
+  
+  override fun handleFailure(failure: LSPFailure?): Boolean {
+    if (failure != null) {
+      client?.logMessage(3, "Error: ${failure.message}")
+      return true
+    }
+    return false
+  }
+}
+```
+
+### Register Language Server
+
+Create the service registration file:
+
+**File**: `META-INF/services/com.tom.rv2ide.lsp.api.ILanguageServer`
+```
+com.example.plugin.MyLanguageServer
+```
+
+## Creating Action Plugins
+
+### Define Custom Actions
+
+Create actions that extend IDE functionality:
+
+```kotlin
+package com.example.plugin
+
+import com.tom.rv2ide.actions.*
+import com.tom.rv2ide.editor.api.IEditor
+import android.graphics.drawable.Drawable
+
+class RunWithOptionsAction : ActionItem {
+  
+  override val id = "plugin.run.with.options"
+  override var label = "Run with Options"
+  override var subtitle: String? = "Run with custom configuration"
+  override var icon: Drawable? = null
+  override var visible = true
+  override var enabled = true
+  override var requiresUIThread = false
+  override var location = ActionItem.Location.EDITOR_TOOLBAR
+  override val order = 200
+  
+  override fun prepare(data: ActionData) {
+    // Enable only when project is open
+    val projectManager = data.get(IProjectManager::class.java)
+    enabled = projectManager?.getWorkspace() != null
+  }
+  
+  override suspend fun execAction(data: ActionData): Any {
+    // Show options dialog
+    val options = showOptionsDialog(data)
+    
+    if (options != null) {
+      // Execute run with options
+      return executeRun(options)
+    }
+    
+    return false
+  }
+  
+  override fun postExec(data: ActionData, result: Any) {
+    if (result == true) {
+      showToast("Run started")
+    }
+  }
+}
+
+// Auto-register via service loader
+class MyActionProvider : ActionItem by RunWithOptionsAction()
+```
+
+### Action Registration
+
+Create service file for actions:
+
+**File**: `META-INF/services/com.tom.rv2ide.actions.ActionItem`
+```
+com.example.plugin.RunWithOptionsAction
+com.example.plugin.MyOtherAction
+```
+
+## Creating Template Plugins
+
+### Custom Template Provider
+
+Provide project and file templates:
+
+```kotlin
+package com.example.plugin
+
+import com.tom.rv2ide.templates.*
+
+class MyTemplateProvider : ITemplateProvider {
+  
+  private val templates = mutableListOf<Template<*>>()
+  
+  init {
+    loadTemplates()
+  }
+  
+  private fun loadTemplates() {
+    templates.add(CustomProjectTemplate())
+    templates.add(CustomFileTemplate())
+    templates.add(CustomActivityTemplate())
+  }
+  
+  override fun getTemplates() = templates.toList()
+  
+  override fun getTemplate(templateId: String) =
+    templates.find { it.id == templateId }
+  
+  override fun reload() {
+    templates.clear()
+    loadTemplates()
+  }
+  
+  override fun release() {
+    templates.clear()
+  }
+}
+
+class CustomProjectTemplate : ProjectTemplate {
+  
+  override val id = "custom-project"
+  override val name = "Custom Project"
+  override val description = "Creates a custom project structure"
+  override val category = "Custom"
+  override val minSdk = 21
+  override val targetSdk = 34
+  override val widgets = listOf(
+    Widget.TextField("appName", "Application Name", "My App"),
+    Widget.TextField("packageName", "Package Name", "com.example.app")
+  )
+  
+  override suspend fun create(
+    data: ProjectTemplateData,
+    executor: RecipeExecutor
+  ) {
+    // Create project structure
+    createDirectories(data, executor)
+    generateFiles(data, executor)
+  }
+}
+```
+
+## Plugin Initialization
+
+### Plugin Main Class
+
+Create a main plugin class for initialization:
+
+```kotlin
+package com.example.plugin
+
+import com.tom.rv2ide.actions.ActionsRegistry
+import com.tom.rv2ide.lsp.api.ILanguageServerRegistry
+import com.tom.rv2ide.templates.ITemplateProvider
+
+class MyPlugin {
+  
+  companion object {
+    private var initialized = false
+    
+    @JvmStatic
+    fun initialize() {
+      if (initialized) return
+      initialized = true
+      
+      // Register language server
+      val lspRegistry = ILanguageServerRegistry.getDefault()
+      lspRegistry.register(
+        MyLanguageServer(),
+        listOf(".myext", ".custom")
+      )
+      
+      // Register actions
+      val actionsRegistry = ActionsRegistry.getInstance()
+      actionsRegistry.registerAction(RunWithOptionsAction())
+      actionsRegistry.registerAction(CustomToolAction())
+      
+      // Initialize templates
+      ITemplateProvider.getInstance(reload = true)
+      
+      println("My Plugin initialized")
+    }
+    
+    @JvmStatic
+    fun shutdown() {
+      // Clean up resources
+      initialized = false
+    }
+  }
+}
+```
+
+## Build Configuration
+
+### Gradle Build File
+
+Configure your plugin build:
+
+```kotlin
+// build.gradle.kts
+plugins {
+    kotlin("jvm")
+}
+
+dependencies {
+    // Android Code Studio APIs
+    compileOnly("com.tom.rv2ide:editor-api:1.0.0")
+    compileOnly("com.tom.rv2ide:lsp-api:1.0.0")
+    compileOnly("com.tom.rv2ide:projects:1.0.0")
+    compileOnly("com.tom.rv2ide:actions:1.0.0")
+    compileOnly("com.tom.rv2ide:templates-api:1.0.0")
+    
+    // Kotlin
+    implementation(kotlin("stdlib"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    
+    // Testing
+    testImplementation("junit:junit:4.13.2")
+    testImplementation(kotlin("test"))
+}
+
+tasks {
+    jar {
+        // Include service files
+        from("src/main/resources")
+    }
+}
+```
+
+## Testing Plugins
+
+### Unit Tests
+
+Write tests for your plugin:
+
+```kotlin
+import org.junit.Test
+import org.junit.Assert.*
+import com.example.plugin.MyLanguageServer
+
+class MyLanguageServerTest {
+  
+  @Test
+  fun testServerInitialization() {
+    val server = MyLanguageServer()
+    assertNotNull(server.serverId)
+    assertEquals("my-language-server", server.serverId)
+  }
+  
+  @Test
+  fun testCompletion() {
+    val server = MyLanguageServer()
+    val params = CompletionParams(
+      file = Paths.get("/test/file.txt"),
+      position = Position(0, 0),
+      prefix = "test"
+    )
+    
+    val result = server.complete(params)
+    assertNotNull(result)
+    assertTrue(result.items.isNotEmpty())
+  }
+}
+```
+
+## Best Practices
+
+### Performance
+
+<AccordionGroup>
+  <Accordion title="Lazy Initialization">
+    Initialize resources only when needed:
+    ```kotlin
+    private val indexer by lazy { CodeIndexer() }
+    private val parser by lazy { MyParser() }
+    ```
+  </Accordion>
+  
+  <Accordion title="Background Processing">
+    Use coroutines for long operations:
+    ```kotlin
+    override suspend fun analyze(file: Path): DiagnosticResult {
+      return withContext(Dispatchers.IO) {
+        // Heavy analysis work
+        performAnalysis(file)
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Caching">
+    Cache expensive computations:
+    ```kotlin
+    private val completionCache = LRUCache<String, CompletionResult>(100)
+    
+    override fun complete(params: CompletionParams): CompletionResult {
+      val key = "${params.file}:${params.position}"
+      return completionCache.getOrPut(key) {
+        computeCompletions(params)
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Error Handling
+
+```kotlin
+override suspend fun execAction(data: ActionData): Any {
+  return try {
+    performAction(data)
+  } catch (e: Exception) {
+    client?.showMessage(3, "Error: ${e.message}")
+    false
+  }
+}
+
+override fun handleFailure(failure: LSPFailure?): Boolean {
+  when (failure?.type) {
+    LSPFailure.Type.TIMEOUT -> {
+      client?.showMessage(2, "Operation timed out")
+      return true
+    }
+    LSPFailure.Type.CANCELLED -> {
+      // User cancelled, no message needed
+      return true
+    }
+    else -> return false
+  }
+}
+```
+
+### Resource Management
+
+```kotlin
+class MyLanguageServer : ILanguageServer {
+  private val resources = mutableListOf<Closeable>()
+  
+  override fun shutdown() {
+    // Clean up all resources
+    resources.forEach { resource ->
+      try {
+        resource.close()
+      } catch (e: Exception) {
+        // Log but don't fail
+      }
+    }
+    resources.clear()
+  }
+}
+```
+
+## Debugging Plugins
+
+### Logging
+
+Use the IDE's logging system:
+
+```kotlin
+import com.tom.rv2ide.logging.ILogger
+
+class MyPlugin {
+  private val logger = ILogger.newInstance("MyPlugin")
+  
+  fun doSomething() {
+    logger.debug("Starting operation")
+    
+    try {
+      // Do work
+      logger.info("Operation completed")
+    } catch (e: Exception) {
+      logger.error("Operation failed", e)
+    }
+  }
+}
+```
+
+### Client Messages
+
+Send messages to the IDE:
+
+```kotlin
+// Log messages (shown in log console)
+client?.logMessage(1, "Info message")
+client?.logMessage(2, "Warning message")
+client?.logMessage(3, "Error message")
+
+// Show messages (shown to user)
+client?.showMessage(1, "Operation successful")
+client?.showMessage(2, "Warning: Consider...")
+client?.showMessage(3, "Error occurred")
+```
+
+## Distribution
+
+### Packaging
+
+Package your plugin as a JAR:
+
+```bash
+./gradlew jar
+```
+
+The JAR will include:
+- Compiled classes
+- Service registration files
+- Resources
+
+### Installation
+
+Users can install plugins by:
+1. Copying the JAR to the plugins directory
+2. Restarting Android Code Studio
+3. The plugin will be auto-loaded via ServiceLoader
+
+## Complete Example
+
+Here's a complete minimal plugin:
+
+```kotlin
+// MyPlugin.kt
+package com.example.plugin
+
+import com.tom.rv2ide.actions.*
+import com.tom.rv2ide.lsp.api.*
+import com.tom.rv2ide.templates.*
+
+// Language Server
+class MyLanguageServer : ILanguageServer {
+  override val serverId = "my-lang"
+  override var client: ILanguageClient? = null
+  
+  override fun shutdown() {}
+  override fun connectClient(client: ILanguageClient?) { this.client = client }
+  override fun applySettings(settings: IServerSettings?) {}
+  override fun setupWorkspace(workspace: IWorkspace) {}
+  override fun complete(params: CompletionParams?) = CompletionResult.EMPTY
+  override suspend fun findReferences(params: ReferenceParams) = ReferenceResult.EMPTY
+  override suspend fun findDefinition(params: DefinitionParams) = DefinitionResult.EMPTY
+  override suspend fun expandSelection(params: ExpandSelectionParams) = params.range
+  override suspend fun signatureHelp(params: SignatureHelpParams) = SignatureHelp.EMPTY
+  override suspend fun analyze(file: Path) = DiagnosticResult.NO_UPDATE
+}
+
+// Action
+class MyAction : ActionItem {
+  override val id = "my.action"
+  override var label = "My Action"
+  override var subtitle: String? = null
+  override var icon: Drawable? = null
+  override var visible = true
+  override var enabled = true
+  override var requiresUIThread = false
+  override var location = ActionItem.Location.EDITOR_TOOLBAR
+  
+  override fun prepare(data: ActionData) {}
+  override suspend fun execAction(data: ActionData) = true
+  override fun postExec(data: ActionData, result: Any) {}
+}
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="API Overview" icon="book" href="./overview">
+    Complete API reference
+  </Card>
+  
+  <Card title="Architecture" icon="sitemap" href="./architecture">
+    Understanding the IDE structure
+  </Card>
+</CardGroup>

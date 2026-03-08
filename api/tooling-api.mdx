@@ -1,0 +1,580 @@
+---
+title: Tooling API
+description: Gradle Tooling API integration for build operations
+---
+
+The Tooling API provides interfaces for interacting with Gradle builds, executing tasks, and querying project models in Android Code Studio.
+
+## Core Interfaces
+
+### IToolingApiServer
+
+The main interface for Gradle Tooling API operations.
+
+**Source**: `tooling/api/src/main/java/com/tom/rv2ide/tooling/api/IToolingApiServer.kt:36`
+
+```kotlin
+package com.tom.rv2ide.tooling.api
+
+import com.tom.rv2ide.tooling.api.messages.*
+import com.tom.rv2ide.tooling.api.messages.result.*
+import com.tom.rv2ide.tooling.api.models.ToolingServerMetadata
+import java.util.concurrent.CompletableFuture
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+
+interface IToolingApiServer {
+  
+  // Server information
+  @JsonRequest
+  fun metadata(): CompletableFuture<ToolingServerMetadata>
+  
+  // Initialization
+  @JsonRequest
+  fun initialize(params: InitializeProjectParams): CompletableFuture<InitializeResult>
+  
+  @JsonRequest
+  fun isServerInitialized(): CompletableFuture<Boolean>
+  
+  // Project access
+  @JsonRequest
+  fun getRootProject(): CompletableFuture<IProject>
+  
+  // Build operations
+  @JsonRequest
+  fun executeTasks(message: TaskExecutionMessage): CompletableFuture<TaskExecutionResult>
+  
+  @JsonRequest
+  fun cancelCurrentBuild(): CompletableFuture<BuildCancellationRequestResult>
+  
+  // Lifecycle
+  @JsonRequest
+  fun shutdown(): CompletableFuture<Void>
+}
+```
+
+### IProject
+
+Interface for querying Gradle project information.
+
+**Source**: `tooling/model/src/main/java/com/tom/rv2ide/tooling/api/IProject.kt:34`
+
+```kotlin
+package com.tom.rv2ide.tooling.api
+
+import com.tom.rv2ide.builder.model.DefaultProjectSyncIssues
+import com.tom.rv2ide.tooling.api.models.BasicProjectMetadata
+import java.util.concurrent.CompletableFuture
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+
+interface IProject : IProjectQueries {
+  
+  @JsonRequest
+  fun getProjects(): CompletableFuture<List<BasicProjectMetadata>>
+  
+  @JsonRequest
+  fun getProjectSyncIssues(): CompletableFuture<DefaultProjectSyncIssues>
+  
+  companion object {
+    const val PROJECT_UNKNOWN = "Unknown"
+  }
+}
+```
+
+## Server Initialization
+
+### Get Server Metadata
+
+Retrieve information about the tooling server:
+
+```kotlin
+import com.tom.rv2ide.tooling.api.IToolingApiServer
+
+val toolingServer: IToolingApiServer = getToolingServer()
+
+toolingServer.metadata().thenAccept { metadata ->
+  println("Tooling Server Version: ${metadata.version}")
+  println("API Version: ${metadata.apiVersion}")
+}
+```
+
+<ResponseField name="ToolingServerMetadata" type="object">
+  <ResponseField name="version" type="String">
+    The version of the tooling server
+  </ResponseField>
+  <ResponseField name="apiVersion" type="String">
+    The API version supported
+  </ResponseField>
+</ResponseField>
+
+### Initialize Project
+
+Initialize the server with a project:
+
+```kotlin
+import com.tom.rv2ide.tooling.api.messages.InitializeProjectParams
+import com.tom.rv2ide.tooling.api.messages.GradleDistributionParams
+import java.io.File
+
+val projectDir = File("/storage/emulated/0/MyApp")
+
+val params = InitializeProjectParams().apply {
+  projectDir = projectDir.absolutePath
+  gradleDistribution = GradleDistributionParams().apply {
+    version = "8.2.1"
+    // Or use local installation
+    // gradleHome = "/path/to/gradle"
+  }
+}
+
+toolingServer.initialize(params).thenAccept { result ->
+  if (result.isSuccessful) {
+    println("Project initialized successfully")
+  } else {
+    println("Initialization failed: ${result.error}")
+  }
+}
+```
+
+<ParamField path="projectDir" type="String" required>
+  The absolute path to the Gradle project root directory
+</ParamField>
+
+<ParamField path="gradleDistribution" type="GradleDistributionParams">
+  Configuration for which Gradle distribution to use
+</ParamField>
+
+### Check Initialization Status
+
+```kotlin
+toolingServer.isServerInitialized().thenAccept { initialized ->
+  if (initialized) {
+    println("Server is ready")
+  } else {
+    println("Server not initialized yet")
+  }
+}
+```
+
+## Project Queries
+
+### Get Root Project
+
+Retrieve the root project proxy:
+
+```kotlin
+toolingServer.getRootProject().thenAccept { project ->
+  println("Root project obtained")
+  
+  // Query project information
+  project.getProjects().thenAccept { projects ->
+    projects.forEach { metadata ->
+      println("Project: ${metadata.name}")
+      println("  Path: ${metadata.path}")
+      println("  Dir: ${metadata.projectDir}")
+    }
+  }
+}
+```
+
+<ResponseField name="IProject" type="interface">
+  A proxy for querying Gradle project model information
+</ResponseField>
+
+### Get Project Metadata
+
+Retrieve information about all projects:
+
+```kotlin
+val project: IProject = toolingServer.getRootProject().get()
+
+project.getProjects().thenAccept { projects ->
+  projects.forEach { metadata ->
+    println("""
+      Project: ${metadata.name}
+      Path: ${metadata.path}
+      Description: ${metadata.description ?: "None"}
+      Build File: ${metadata.buildFile}
+    """.trimIndent())
+  }
+}
+```
+
+<ResponseField name="BasicProjectMetadata" type="object">
+  <ResponseField name="name" type="String">
+    The project name
+  </ResponseField>
+  <ResponseField name="path" type="String">
+    The Gradle project path (e.g., ":app")
+  </ResponseField>
+  <ResponseField name="projectDir" type="File">
+    The project directory
+  </ResponseField>
+  <ResponseField name="buildFile" type="File">
+    The build.gradle or build.gradle.kts file
+  </ResponseField>
+  <ResponseField name="description" type="String?">
+    Optional project description
+  </ResponseField>
+</ResponseField>
+
+### Get Sync Issues
+
+Retrieve synchronization issues:
+
+```kotlin
+project.getProjectSyncIssues().thenAccept { issues ->
+  if (issues.syncIssues.isEmpty()) {
+    println("No sync issues")
+  } else {
+    issues.syncIssues.forEach { issue ->
+      println("[${issue.severity}] ${issue.message}")
+      println("  Type: ${issue.type}")
+      println("  Data: ${issue.data}")
+    }
+  }
+}
+```
+
+## Task Execution
+
+### Execute Gradle Tasks
+
+Run Gradle tasks:
+
+```kotlin
+import com.tom.rv2ide.tooling.api.messages.TaskExecutionMessage
+
+val message = TaskExecutionMessage().apply {
+  tasks = listOf("clean", "assembleDebug")
+  projectPath = ":app"
+}
+
+toolingServer.executeTasks(message).thenAccept { result ->
+  if (result.isSuccessful) {
+    println("Tasks completed successfully")
+    println("Output: ${result.output}")
+  } else {
+    println("Task execution failed")
+    println("Error: ${result.error}")
+  }
+}
+```
+
+<ParamField path="tasks" type="List<String>" required>
+  List of task names to execute (e.g., "clean", "build", "test")
+</ParamField>
+
+<ParamField path="projectPath" type="String">
+  The Gradle project path (defaults to root project)
+</ParamField>
+
+### Execute with Arguments
+
+Pass additional arguments to Gradle:
+
+```kotlin
+val message = TaskExecutionMessage().apply {
+  tasks = listOf("build")
+  args = listOf(
+    "--stacktrace",
+    "--info",
+    "-Pandroid.injected.build.api=30"
+  )
+}
+
+toolingServer.executeTasks(message).thenAccept { result ->
+  // Handle result
+}
+```
+
+<ParamField path="args" type="List<String>">
+  Additional command-line arguments for Gradle
+</ParamField>
+
+### Monitor Build Output
+
+Listen for build output and progress:
+
+```kotlin
+import com.tom.rv2ide.tooling.api.IToolingApiClient
+
+class BuildMonitor : IToolingApiClient {
+  
+  override fun onOutput(message: LogMessageParams) {
+    when (message.level) {
+      LogLevel.ERROR -> println("[ERROR] ${message.message}")
+      LogLevel.WARN -> println("[WARN] ${message.message}")
+      LogLevel.INFO -> println("[INFO] ${message.message}")
+      else -> println(message.message)
+    }
+  }
+  
+  override fun onProgress(message: String) {
+    println("Progress: $message")
+  }
+}
+
+// Register client before executing tasks
+val client = BuildMonitor()
+toolingServer.setClient(client)
+```
+
+## Build Cancellation
+
+### Cancel Current Build
+
+Stop a running build:
+
+```kotlin
+toolingServer.cancelCurrentBuild().thenAccept { result ->
+  if (result.isSuccessful) {
+    println("Build cancelled successfully")
+  } else {
+    println("Failed to cancel build: ${result.message}")
+  }
+}
+```
+
+<Warning>
+  Build cancellation is asynchronous and may take time to complete. The build may finish before cancellation takes effect.
+</Warning>
+
+## Task Execution Results
+
+### Handle Results
+
+Process task execution results:
+
+```kotlin
+toolingServer.executeTasks(message).thenAccept { result ->
+  println("Success: ${result.isSuccessful}")
+  println("Duration: ${result.executionTimeMs}ms")
+  
+  if (result.isSuccessful) {
+    println("Build output:")
+    println(result.output)
+  } else {
+    println("Build failed:")
+    println(result.error)
+    
+    result.failureReasons?.forEach { reason ->
+      println("  - $reason")
+    }
+  }
+}
+```
+
+<ResponseField name="TaskExecutionResult" type="object">
+  <ResponseField name="isSuccessful" type="Boolean">
+    Whether the tasks completed successfully
+  </ResponseField>
+  <ResponseField name="output" type="String">
+    Standard output from the build
+  </ResponseField>
+  <ResponseField name="error" type="String">
+    Error output if the build failed
+  </ResponseField>
+  <ResponseField name="executionTimeMs" type="Long">
+    Duration of task execution in milliseconds
+  </ResponseField>
+  <ResponseField name="failureReasons" type="List<String>?">
+    List of failure reasons if applicable
+  </ResponseField>
+</ResponseField>
+
+## Common Tasks
+
+### Build Project
+
+```kotlin
+fun buildProject(variant: String = "Debug") {
+  val message = TaskExecutionMessage().apply {
+    tasks = listOf("assemble$variant")
+  }
+  
+  toolingServer.executeTasks(message).thenAccept { result ->
+    if (result.isSuccessful) {
+      println("Build successful")
+    }
+  }
+}
+```
+
+### Clean Project
+
+```kotlin
+fun cleanProject() {
+  val message = TaskExecutionMessage().apply {
+    tasks = listOf("clean")
+  }
+  
+  toolingServer.executeTasks(message).thenAccept { result ->
+    println("Clean completed")
+  }
+}
+```
+
+### Run Tests
+
+```kotlin
+fun runTests() {
+  val message = TaskExecutionMessage().apply {
+    tasks = listOf("test")
+    args = listOf("--info")
+  }
+  
+  toolingServer.executeTasks(message).thenAccept { result ->
+    if (result.isSuccessful) {
+      println("All tests passed")
+    } else {
+      println("Tests failed: ${result.error}")
+    }
+  }
+}
+```
+
+### Install APK
+
+```kotlin
+fun installDebugApk() {
+  val message = TaskExecutionMessage().apply {
+    tasks = listOf("installDebug")
+    projectPath = ":app"
+  }
+  
+  toolingServer.executeTasks(message).thenAccept { result ->
+    if (result.isSuccessful) {
+      println("APK installed successfully")
+    }
+  }
+}
+```
+
+## Lifecycle Management
+
+### Shutdown Server
+
+Cleanly shutdown the tooling server:
+
+```kotlin
+toolingServer.shutdown().thenAccept {
+  println("Tooling server shut down")
+}
+```
+
+<Note>
+  Always call `shutdown()` when closing a project to release Gradle daemon connections and resources.
+</Note>
+
+## Complete Example
+
+Here's a complete example demonstrating tooling API usage:
+
+```kotlin
+import com.tom.rv2ide.tooling.api.*
+import com.tom.rv2ide.tooling.api.messages.*
+import java.io.File
+
+class GradleBuildManager(private val toolingServer: IToolingApiServer) {
+  
+  suspend fun initializeAndBuild(projectPath: String) {
+    // 1. Initialize project
+    val initParams = InitializeProjectParams().apply {
+      projectDir = projectPath
+      gradleDistribution = GradleDistributionParams().apply {
+        version = "8.2.1"
+      }
+    }
+    
+    val initResult = toolingServer.initialize(initParams).get()
+    if (!initResult.isSuccessful) {
+      println("Failed to initialize: ${initResult.error}")
+      return
+    }
+    println("Project initialized")
+    
+    // 2. Get project information
+    val project = toolingServer.getRootProject().get()
+    val projects = project.getProjects().get()
+    
+    println("Projects in workspace:")
+    projects.forEach { metadata ->
+      println("  - ${metadata.name} (${metadata.path})")
+    }
+    
+    // 3. Check for sync issues
+    val syncIssues = project.getProjectSyncIssues().get()
+    if (syncIssues.syncIssues.isNotEmpty()) {
+      println("Warning: Found sync issues:")
+      syncIssues.syncIssues.forEach { issue ->
+        println("  [${issue.severity}] ${issue.message}")
+      }
+    }
+    
+    // 4. Build the project
+    println("Starting build...")
+    val buildMessage = TaskExecutionMessage().apply {
+      tasks = listOf("assembleDebug")
+      args = listOf("--stacktrace")
+    }
+    
+    val buildResult = toolingServer.executeTasks(buildMessage).get()
+    
+    if (buildResult.isSuccessful) {
+      println("Build completed in ${buildResult.executionTimeMs}ms")
+    } else {
+      println("Build failed:")
+      println(buildResult.error)
+    }
+  }
+  
+  fun cleanup() {
+    toolingServer.shutdown()
+  }
+}
+```
+
+## Error Handling
+
+### Handle Async Errors
+
+```kotlin
+toolingServer.executeTasks(message)
+  .exceptionally { throwable ->
+    println("Task execution error: ${throwable.message}")
+    throwable.printStackTrace()
+    null
+  }
+  .thenAccept { result ->
+    if (result != null) {
+      // Process result
+    }
+  }
+```
+
+### Timeout Handling
+
+```kotlin
+import java.util.concurrent.TimeUnit
+
+try {
+  val result = toolingServer.executeTasks(message)
+    .get(5, TimeUnit.MINUTES)
+  // Process result
+} catch (e: TimeoutException) {
+  println("Build timed out after 5 minutes")
+  toolingServer.cancelCurrentBuild()
+}
+```
+
+## Related APIs
+
+<CardGroup cols={2}>
+  <Card title="Project API" icon="folder-tree" href="./project-api">
+    Access project and workspace information
+  </Card>
+  
+  <Card title="Action System" icon="bolt" href="./action-system">
+    Create build action menu items
+  </Card>
+</CardGroup>

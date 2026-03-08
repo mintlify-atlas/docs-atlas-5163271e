@@ -1,0 +1,566 @@
+---
+title: Kotlin Language Support
+description: Advanced Kotlin language server with intelligent completion, diagnostics, and seamless Java interoperability for Android development
+---
+
+Android Code Studio provides full-featured Kotlin language support through integration with the Kotlin Language Server (KLS), enabling modern Android development with Kotlin's expressive syntax and safety features.
+
+## Language Server Architecture
+
+The Kotlin LSP implementation uses a client-server architecture:
+
+- **KotlinLanguageServer**: Main server coordinator managing LSP lifecycle
+- **KotlinServerProcessManager**: Handles communication with the external Kotlin Language Server process
+- **KotlinDocumentManager**: Synchronizes document state between IDE and LSP server
+- **KotlinRequestHandler**: Processes LSP requests (completion, hover, navigation)
+- **KotlinEventHandler**: Responds to document change events
+
+<Note>
+  The Kotlin language server runs as a separate process, communicating via JSON-RPC protocol over standard input/output streams. This architecture ensures isolation and stability.
+</Note>
+
+## Features
+
+### Code Completion
+
+<CardGroup cols={2}>
+  <Card title="Intelligent Suggestions" icon="brain">
+    Context-aware completion for functions, classes, properties, and keywords
+  </Card>
+  <Card title="Auto-Import" icon="magic">
+    Automatic import resolution with classpath scanning for unresolved symbols
+  </Card>
+  <Card title="Snippet Transformation" icon="wand-magic-sparkles">
+    Smart parameter hints and snippet expansion for function calls
+  </Card>
+  <Card title="Java Interop" icon="link">
+    Seamless completion of Java classes and methods from project dependencies
+  </Card>
+</CardGroup>
+
+The completion system combines multiple sources:
+
+1. **LSP Server Completions**: Core Kotlin language completions from the Kotlin compiler
+2. **Classpath Enhancement**: Additional Java class completions from project dependencies
+3. **Snippet Repository**: Built-in code templates for common Kotlin patterns
+
+**Implementation Details** (from `KotlinCompletionConverter.kt`):
+
+```kotlin
+suspend fun convertWithClasspathEnhancement(
+    itemsArray: JsonArray,
+    fileContent: String,
+    prefix: String,
+): List<CompletionItem> = withContext(cpuDispatcher) {
+    // Process LSP and classpath items in parallel
+    val lspItemsDeferred = async { convertFast(itemsArray, fileContent, prefix) }
+    val classpathItemsDeferred = async {
+        if (prefix.length >= 2 && javaCompilerBridge != null) {
+            getClasspathCompletions(prefix, fileContent)
+        } else emptyList()
+    }
+    
+    val lspItems = lspItemsDeferred.await()
+    val classpathItems = classpathItemsDeferred.await()
+    
+    (lspItems + classpathItems).distinctBy { "${it.ideLabel}:${it.detail}" }
+}
+```
+
+### Diagnostics and Error Detection
+
+Real-time analysis and error reporting:
+
+- **Compilation Errors**: Syntax errors, type mismatches, and unresolved references
+- **Semantic Warnings**: Unused variables, redundant casts, and deprecated API usage
+- **Import Analysis**: Missing import detection with quick-fix suggestions
+- **Quick Fixes**: Automated import resolution and common error corrections
+
+<Tabs>
+  <Tab title="Type Errors">
+    ```kotlin
+    // Type mismatch detected
+    val number: Int = "text" // Error: Type mismatch
+    
+    // Unresolved reference
+    val result = unknownFunction() // Error: Unresolved reference
+    ```
+  </Tab>
+  <Tab title="Import Issues">
+    ```kotlin
+    // Missing import - quick fix available
+    val list = ArrayList<String>() // Quick fix: Import ArrayList
+    
+    // After quick fix applied:
+    import java.util.ArrayList
+    
+    val list = ArrayList<String>() // Resolved
+    ```
+  </Tab>
+  <Tab title="Warnings">
+    ```kotlin
+    // Unused variable warning
+    fun example() {
+        val unused = 42 // Warning: Variable 'unused' is never used
+    }
+    
+    // Redundant cast warning
+    val text = "Hello" as String // Warning: Cast is redundant
+    ```
+  </Tab>
+</Tabs>
+
+The diagnostic system is powered by `KotlinDiagnosticProvider` and `KotlinImportAnalyzer`, which work together to provide actionable error messages and quick fixes.
+
+### Code Navigation
+
+<CardGroup cols={2}>
+  <Card title="Go to Definition" icon="arrow-pointer">
+    Navigate to declarations of functions, classes, properties, and type parameters
+  </Card>
+  <Card title="Find References" icon="magnifying-glass">
+    Locate all usages of a symbol across Kotlin and Java files
+  </Card>
+  <Card title="Hover Information" icon="circle-info">
+    View type information, documentation, and signatures on hover
+  </Card>
+  <Card title="Signature Help" icon="message-lines">
+    Display parameter information during function calls
+  </Card>
+</CardGroup>
+
+### Code Formatting
+
+The Kotlin formatter uses the official Kotlin Language Server formatting capabilities:
+
+```kotlin
+// Before formatting
+fun example(){val x=1;println(x)}
+
+// After formatting (automatic)
+fun example() {
+    val x = 1
+    println(x)
+}
+```
+
+Formatting is handled by `KotlinCodeFormatProvider`, which communicates with the LSP server to apply consistent code style.
+
+## Code Examples
+
+### Modern Kotlin Features
+
+<Tabs>
+  <Tab title="Data Classes">
+    ```kotlin User.kt
+    // Concise data class with auto-generated equals, hashCode, toString
+    data class User(
+        val id: Int,
+        val name: String,
+        val email: String
+    ) {
+        fun isValid(): Boolean = email.contains("@")
+    }
+    
+    // Usage with copy
+    val user = User(1, "Alice", "alice@example.com")
+    val updated = user.copy(name = "Alice Smith")
+    ```
+  </Tab>
+  <Tab title="Extension Functions">
+    ```kotlin Extensions.kt
+    // Extend existing classes with new functionality
+    fun String.isValidEmail(): Boolean {
+        return this.contains("@") && this.contains(".")
+    }
+    
+    fun List<Int>.average(): Double {
+        return if (isEmpty()) 0.0 else sum() / size.toDouble()
+    }
+    
+    // Usage
+    val email = "test@example.com"
+    if (email.isValidEmail()) {
+        println("Valid email")
+    }
+    ```
+  </Tab>
+  <Tab title="Coroutines">
+    ```kotlin AsyncExample.kt
+    import kotlinx.coroutines.*
+    
+    class DataRepository {
+        // Suspend function for async operations
+        suspend fun fetchData(): String = withContext(Dispatchers.IO) {
+            // Simulate network call
+            delay(1000)
+            "Data loaded"
+        }
+        
+        // Launch coroutine from main
+        fun loadDataAsync() = CoroutineScope(Dispatchers.Main).launch {
+            val data = fetchData()
+            println(data)
+        }
+    }
+    ```
+  </Tab>
+  <Tab title="Sealed Classes">
+    ```kotlin Result.kt
+    // Sealed class for type-safe state representation
+    sealed class Result<out T> {
+        data class Success<T>(val data: T) : Result<T>()
+        data class Error(val exception: Exception) : Result<Nothing>()
+        object Loading : Result<Nothing>()
+    }
+    
+    // Exhaustive when expression
+    fun <T> handleResult(result: Result<T>) {
+        when (result) {
+            is Result.Success -> println("Data: ${result.data}")
+            is Result.Error -> println("Error: ${result.exception}")
+            Result.Loading -> println("Loading...")
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Android Development
+
+```kotlin MainActivity.kt
+package com.example.myapp
+
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
+class MainActivity : AppCompatActivity() {
+    
+    private val viewModel: MainViewModel by viewModels()
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        
+        // View binding with null safety
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        
+        // Coroutine in lifecycle scope
+        lifecycleScope.launch {
+            viewModel.uiState.collect { state ->
+                updateUI(state)
+            }
+        }
+        
+        // Lambda syntax for click listener
+        binding.button.setOnClickListener {
+            viewModel.handleButtonClick()
+        }
+    }
+    
+    private fun updateUI(state: UiState) {
+        binding.textView.text = state.message
+    }
+}
+```
+
+## Supported Language Features
+
+### Kotlin Core Features
+
+- **Null Safety**: Non-nullable types, safe calls (`?.`), and Elvis operator (`?:`)
+- **Type Inference**: Smart type inference reducing boilerplate
+- **Lambda Expressions**: First-class function support with concise syntax
+- **Coroutines**: Structured concurrency for asynchronous programming
+- **Extension Functions**: Add methods to existing classes without inheritance
+- **Data Classes**: Automatic generation of `equals()`, `hashCode()`, `toString()`, and `copy()`
+- **Sealed Classes**: Restricted class hierarchies for type-safe state management
+- **Delegation**: Property and class delegation with `by` keyword
+- **Destructuring**: Decompose objects into multiple variables
+
+### Kotlin Version Support
+
+<Note>
+  Android Code Studio supports Kotlin 1.9+ with compatibility for modern language features including inline value classes, context receivers (experimental), and improved type inference.
+</Note>
+
+## Configuration
+
+### LSP Server Settings
+
+The Kotlin language server can be configured through `LspFeatures`:
+
+```kotlin
+// Enable/disable specific features
+LspFeatures.isDiagnosticsEnabled() // Compilation diagnostics
+LspFeatures.isHoverEnabled()       // Hover information
+```
+
+### Workspace Setup
+
+The `KotlinWorkspaceSetup` class handles initialization:
+
+```kotlin
+class KotlinWorkspaceSetup(private val context: Context, private val workspace: IWorkspace) {
+    fun setup(processManager: KotlinServerProcessManager) {
+        // Initialize Kotlin compiler classpath
+        // Configure language server process
+        // Set up indexing for project sources
+    }
+}
+```
+
+### Compiler Options
+
+Kotlin compiler settings are inherited from module configuration:
+
+- **JVM Target**: Kotlin JVM bytecode target version
+- **API Version**: Kotlin API level compatibility
+- **Language Version**: Kotlin language feature level
+- **Compiler Plugins**: KSP, Parcelize, Serialization support
+
+## Performance Features
+
+### Caching and Indexing
+
+The `KotlinIndexCache` provides efficient symbol lookup:
+
+```kotlin
+class KotlinIndexCache {
+    // Cache for class symbols
+    private val classCache = ConcurrentHashMap<String, ClassInfo>()
+    
+    // Cache for function symbols
+    private val functionCache = ConcurrentHashMap<String, List<FunctionInfo>>()
+    
+    // Clear cache on project sync
+    fun clearCache()
+    
+    // Get cache statistics
+    fun getCacheStats(): String
+}
+```
+
+### Parallel Processing
+
+Completion items are processed in parallel using coroutines:
+
+```kotlin
+// From KotlinCompletionConverter
+val cpuDispatcher = Executors.newFixedThreadPool(
+    Runtime.getRuntime().availableProcessors()
+).asCoroutineDispatcher()
+
+suspend fun convertFast(
+    itemsArray: JsonArray,
+    fileContent: String,
+    prefix: String,
+): List<CompletionItem> = withContext(cpuDispatcher) {
+    val cpuCount = Runtime.getRuntime().availableProcessors()
+    val chunkSize = (itemsList.size / cpuCount).coerceAtLeast(10)
+    
+    itemsList.chunked(chunkSize).map { chunk ->
+        async { processChunk(chunk) }
+    }.awaitAll().flatten()
+}
+```
+
+## Java Interoperability
+
+Kotlin code can seamlessly interact with Java:
+
+### Calling Java from Kotlin
+
+```kotlin
+// Call Java methods with named parameters
+val intent = Intent(this, MainActivity::class.java).apply {
+    putExtra("key", "value")
+}
+
+// Use Java collections with Kotlin extensions
+val javaList: java.util.ArrayList<String> = arrayListOf("a", "b")
+javaList.forEach { println(it) }
+
+// Handle Java nullability with platform types
+val text: String? = javaMethod() // Platform type becomes nullable
+```
+
+### Calling Kotlin from Java
+
+```kotlin
+// Kotlin file with @JvmStatic and @JvmName
+object Utils {
+    @JvmStatic
+    fun formatDate(date: Date): String = SimpleDateFormat().format(date)
+    
+    @JvmName("isValidEmail")
+    fun String.isValid(): Boolean = contains("@")
+}
+```
+
+The `KotlinJavaCompilerBridge` enables cross-language navigation and completion:
+
+```kotlin
+class KotlinJavaCompilerBridge(private val workspace: IWorkspace) {
+    // Find Java classes for Kotlin completion
+    fun findClassesByPrefix(prefix: String): List<ClassInfo>
+    
+    // Resolve Java symbols from Kotlin code
+    fun resolveJavaSymbol(fqn: String): JavaSymbolInfo?
+}
+```
+
+## Snippets
+
+Kotlin code snippets accelerate development:
+
+<Tabs>
+  <Tab title="Functions">
+    ```kotlin
+    // Type 'fun' and press Tab
+    fun functionName(param: Type): ReturnType {
+        // Function body
+    }
+    
+    // Type 'funr' for function with return
+    fun calculate(): Int {
+        return 42
+    }
+    ```
+  </Tab>
+  <Tab title="Classes">
+    ```kotlin
+    // Type 'class' and press Tab
+    class ClassName {
+        // Class body
+    }
+    
+    // Type 'data' for data class
+    data class User(val name: String, val age: Int)
+    
+    // Type 'sealed' for sealed class
+    sealed class Result {
+        object Success : Result()
+        object Error : Result()
+    }
+    ```
+  </Tab>
+  <Tab title="Control Flow">
+    ```kotlin
+    // Type 'if' and press Tab
+    if (condition) {
+        // If body
+    }
+    
+    // Type 'when' and press Tab
+    when (value) {
+        condition1 -> result1
+        condition2 -> result2
+        else -> defaultResult
+    }
+    
+    // Type 'for' and press Tab
+    for (item in collection) {
+        // Loop body
+    }
+    ```
+  </Tab>
+</Tabs>
+
+Snippets are stored in `java/lsp/src/main/assets/data/editor/kotlin/` with scope-specific files:
+- `snippets.global.json`: Available everywhere
+- `snippets.top-level.json`: File-level declarations
+- `snippets.member.json`: Class members
+- `snippets.local.json`: Inside functions
+
+## Limitations
+
+<Warning>
+  Current limitations of the Kotlin language server:
+  
+  - **Build Script Support**: Limited completion in Gradle Kotlin DSL files
+  - **Multi-platform**: Kotlin Multiplatform projects have partial support
+  - **Compiler Plugins**: Some compiler plugins may not be fully indexed
+  - **Source Generation**: Generated Kotlin code from annotation processors may have delayed indexing
+</Warning>
+
+## Troubleshooting
+
+### LSP Server Connection Issues
+
+If completions or diagnostics stop working:
+
+1. Check LSP server status in logs
+2. Restart the language server from settings
+3. Clear the index cache: `kotlinLanguageServer.clearAllCaches()`
+
+### Performance Issues
+
+For large projects with slow completions:
+
+1. Enable completion caching
+2. Adjust the completion timeout (default: 3000ms)
+3. Reduce the number of indexed source roots
+
+### Import Resolution
+
+If auto-import is not working:
+
+1. Ensure dependencies are properly synced
+2. Check that the classpath includes all required libraries
+3. Verify the import analyzer cache: `importAnalyzer.updateImportCache(compilerService)`
+
+## API Reference
+
+### KotlinLanguageServer
+
+Main server interface:
+
+```kotlin
+class KotlinLanguageServer(private val context: Context) : ILanguageServer {
+    override val serverId: String = "kotlin"
+    
+    // Register editor for diagnostic rendering
+    fun registerEditor(file: Path, editor: CodeEditor)
+    
+    // Invalidate cache after project changes
+    fun invalidateCacheAndReindex()
+    
+    // Get cache statistics
+    fun getCacheInfo(): String
+}
+```
+
+### KotlinCompilerService
+
+Access to Kotlin compiler:
+
+```kotlin
+class KotlinCompilerService(private val module: AndroidModule) {
+    // Compile Kotlin sources
+    fun compile(sources: List<Path>): CompilationResult
+    
+    // Get classpath for module
+    fun getClasspath(): List<String>
+}
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Java Support" icon="code" href="/languages/java">
+    Explore Java language features
+  </Card>
+  <Card title="XML Support" icon="file-code" href="/languages/xml">
+    Learn about XML editing
+  </Card>
+  <Card title="Gradle Integration" icon="cube" href="/features/gradle-build-system">
+    Configure build with Gradle Kotlin DSL
+  </Card>
+  <Card title="Debugging" icon="bug" href="/guides/debugging">
+    Debug Kotlin applications
+  </Card>
+</CardGroup>

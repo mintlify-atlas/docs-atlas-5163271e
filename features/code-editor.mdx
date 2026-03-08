@@ -1,0 +1,364 @@
+---
+title: 'Code Editor'
+description: 'Advanced code editor with syntax highlighting, LSP integration, and TreeSitter support'
+icon: 'code'
+---
+
+## Overview
+
+Android Code Studio features a powerful code editor built on top of the Sora Editor framework, providing a complete coding experience on Android devices. The editor supports multiple languages including Java, Kotlin, XML, Groovy, and more with advanced features like syntax highlighting, code completion, and real-time diagnostics.
+
+## Core Capabilities
+
+The editor is designed with modularity in mind, exposing functionality through the `IEditor` interface for seamless integration across the IDE.
+
+### Text Manipulation
+
+<CardGroup cols={2}>
+  <Card title="Selection Control" icon="text-select">
+    Set cursor position, select ranges, and navigate through code programmatically
+  </Card>
+  <Card title="Content Modification" icon="file-edit">
+    Replace content, append text, and validate text ranges
+  </Card>
+  <Card title="Position Validation" icon="check-circle">
+    Verify line and column positions before operations
+  </Card>
+  <Card title="LSP Integration" icon="link">
+    Seamless Language Server Protocol support for intelligent features
+  </Card>
+</CardGroup>
+
+### Editor API
+
+The `IEditor` interface provides comprehensive text editing capabilities:
+
+```java
+public interface IEditor {
+  // Get the current file
+  File getFile();
+  
+  // Check if content is modified
+  boolean isModified();
+  
+  // Set cursor position
+  void setSelection(Position position);
+  void setSelection(Range range);
+  
+  // Get cursor information
+  Position getCursorLSPPosition();
+  Range getCursorLSPRange();
+  
+  // Validate positions and ranges
+  boolean isValidPosition(Position position);
+  boolean isValidRange(Range range);
+  
+  // Content manipulation
+  int append(CharSequence text);
+  void replaceContent(CharSequence newContent);
+  void goToEnd();
+}
+```
+
+## Language Support
+
+The editor implements language-specific features through the `IDELanguage` base class:
+
+```kotlin
+abstract class IDELanguage : Language {
+  protected open val languageServer: ILanguageServer?
+  
+  open fun getTabSize(): Int {
+    return EditorPreferences.tabSize
+  }
+  
+  override fun requireAutoComplete(
+    content: ContentReference,
+    position: CharPosition,
+    publisher: CompletionPublisher,
+    extraArguments: Bundle
+  )
+  
+  override fun useTab(): Boolean {
+    return !EditorPreferences.useSoftTab
+  }
+}
+```
+
+<Tabs>
+  <Tab title="Java">
+    Full Java language support with:
+    - Java compiler integration
+    - Code completion
+    - Error diagnostics
+    - Refactoring support
+  </Tab>
+  <Tab title="Kotlin">
+    Native Kotlin support featuring:
+    - Kotlin compiler service
+    - Smart completions
+    - Type inference
+    - Extension functions
+  </Tab>
+  <Tab title="XML">
+    Android XML layouts with:
+    - Attribute completion
+    - Resource references
+    - Layout preview
+    - Format on save
+  </Tab>
+  <Tab title="Groovy">
+    Gradle build files:
+    - Dependency completion
+    - Build script analysis
+    - Syntax highlighting
+  </Tab>
+</Tabs>
+
+## TreeSitter Integration
+
+Android Code Studio uses TreeSitter for fast, incremental parsing and syntax highlighting:
+
+<Accordion title="TreeSitter Features">
+  <CardGroup cols={2}>
+    <Card title="Parser" icon="diagram-project">
+      `TreeSitterParser` - Incremental parsing for efficient syntax analysis
+    </Card>
+    <Card title="Query Engine" icon="magnifying-glass">
+      `TreeSitterQuery` - Pattern matching and code navigation
+    </Card>
+    <Card title="Tree Navigation" icon="sitemap">
+      `TreeSitterTree` and `TreeSitterNode` - AST traversal
+    </Card>
+    <Card title="Cursor API" icon="location-crosshairs">
+      `TreeSitterTreeCursor` - Efficient tree walking
+    </Card>
+  </CardGroup>
+</Accordion>
+
+### TreeSitter API Usage
+
+```kotlin
+// Parse source code
+val parser = TreeSitterParser.create(TreeSitterNativeLanguage.JAVA)
+val tree = parser.parseString(sourceCode)
+
+// Navigate the syntax tree
+val rootNode = tree.rootNode
+val cursor = rootNode.walk()
+
+// Query for specific patterns
+val query = TreeSitterQuery.create(
+  language = TreeSitterNativeLanguage.JAVA,
+  source = "(method_declaration) @method"
+)
+
+// Execute query
+val queryCursor = query.execute(rootNode)
+while (queryCursor.nextMatch()) {
+  val captures = queryCursor.captures
+  // Process matched nodes
+}
+```
+
+## LSP Editor Features
+
+The `ILspEditor` interface extends the base editor with Language Server Protocol features:
+
+```kotlin
+interface ILspEditor {
+  // Set language server connection
+  fun setLanguageServer(server: ILanguageServer?)
+  fun setLanguageClient(client: ILanguageClient?)
+  
+  // Execute LSP commands
+  fun executeCommand(command: Command?)
+  
+  // Signature help
+  fun signatureHelp()
+  fun showSignatureHelp(help: SignatureHelp?)
+  
+  // Navigation features
+  fun findDefinition()
+  fun findReferences()
+  
+  // Selection expansion
+  fun expandSelection()
+  
+  // Window management
+  fun ensureWindowsDismissed()
+}
+```
+
+### LSP Features in Action
+
+<Tabs>
+  <Tab title="Go to Definition">
+    ```kotlin
+    // Navigate to symbol definition
+    editor.findDefinition()
+    // LSP server locates the definition
+    // Editor automatically jumps to the location
+    ```
+  </Tab>
+  <Tab title="Find References">
+    ```kotlin
+    // Find all references to a symbol
+    editor.findReferences()
+    // Results displayed in references panel
+    ```
+  </Tab>
+  <Tab title="Signature Help">
+    ```kotlin
+    // Show method signature while typing
+    editor.signatureHelp()
+    // Popup shows parameter info
+    ```
+  </Tab>
+  <Tab title="Smart Selection">
+    ```kotlin
+    // Expand selection semantically
+    editor.expandSelection()
+    // Selection grows to encompass logical blocks
+    ```
+  </Tab>
+</Tabs>
+
+## Code Completion
+
+The editor provides intelligent code completion through the `CommonCompletionProvider`:
+
+```kotlin
+val completionProvider = CommonCompletionProvider(server, cancelChecker)
+val completionItems = completionProvider.complete(
+  content = content,
+  file = file,
+  position = position
+) { char -> checkIsCompletionChar(char) }
+
+// Publish completions to UI
+publisher.setUpdateThreshold(1)
+(publisher as IDECompletionPublisher).addLSPItems(completionItems)
+```
+
+<Note>
+  Code completion is context-aware and provides suggestions based on:
+  - Current scope
+  - Imported types
+  - Project dependencies
+  - Language semantics
+</Note>
+
+## Editor Configuration
+
+<Accordion title="Preferences">
+  Configure editor behavior through `EditorPreferences`:
+  
+  - **Tab Size**: Customize indentation width
+  - **Soft Tabs**: Use spaces instead of tab characters
+  - **Auto Save**: Automatically save files on edit
+  - **Font Settings**: Customize font family and size
+  - **Line Numbers**: Show/hide line numbers
+  - **Word Wrap**: Enable/disable text wrapping
+</Accordion>
+
+## Position and Range Validation
+
+The editor includes robust validation for text positions:
+
+```java
+// Validate a position
+if (editor.isValidPosition(position)) {
+  editor.setSelection(position);
+}
+
+// Validate a range with column equality allowed
+if (editor.isValidRange(range, true)) {
+  // Perform operation on range
+}
+
+// Validate individual components
+if (editor.isValidLine(lineIndex)) {
+  if (editor.isValidColumn(lineIndex, columnIndex)) {
+    // Position is valid
+  }
+}
+```
+
+<Warning>
+  Always validate positions and ranges before performing text operations to avoid
+  `IndexOutOfBoundsException` errors.
+</Warning>
+
+## File Association
+
+Each editor instance is associated with a file:
+
+```java
+// Get the current file
+File file = editor.getFile();
+
+// Check modification status
+if (editor.isModified()) {
+  // File has unsaved changes
+  // Prompt user to save
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Validate Before Operations" icon="shield-check">
+    Always validate positions and ranges before text manipulation
+  </Card>
+  <Card title="Use LSP Features" icon="wand-magic-sparkles">
+    Leverage LSP integration for intelligent code operations
+  </Card>
+  <Card title="Handle Cancellation" icon="ban">
+    Implement cancellation checks in long-running operations
+  </Card>
+  <Card title="Optimize Completions" icon="gauge-high">
+    Set appropriate update thresholds for completion publishers
+  </Card>
+</CardGroup>
+
+## Advanced Features
+
+### Incremental Analysis
+
+The editor supports incremental syntax analysis for improved performance:
+
+```kotlin
+class BaseIncrementalAnalyzeManager {
+  // Analyze only changed regions
+  fun analyzeIncremental(content: Content, changes: List<ContentChange>)
+  
+  // Maintain token cache
+  fun getCachedTokens(line: Int): List<IncrementalToken>
+}
+```
+
+### Custom Formatters
+
+Implement custom code formatters:
+
+```kotlin
+class LSPFormatter(private val server: ILanguageServer) : Formatter {
+  override fun format(text: Content, cursorRange: TextRange): TextRange {
+    // Request formatting from LSP server
+    val edits = server.formatting(documentUri, options)
+    // Apply edits and return new cursor position
+  }
+}
+```
+
+<Tip>
+  The editor architecture allows easy extension with custom language implementations
+  and formatters. Simply extend `IDELanguage` and implement the required methods.
+</Tip>
+
+## Related Features
+
+- [Language Servers](/features/language-servers) - LSP implementation details
+- [Project Management](/features/project-management) - File and project handling
+- [AI Agent](/features/ai-agent) - AI-powered code assistance

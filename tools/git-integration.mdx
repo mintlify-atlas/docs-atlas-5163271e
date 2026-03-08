@@ -1,0 +1,584 @@
+---
+title: Git Integration
+description: Version control with Git - commit, branch, push, pull, and manage repositories
+icon: git-branch
+---
+
+Android Code Studio includes comprehensive Git integration powered by JGit, enabling full version control capabilities directly from your Android device.
+
+## Overview
+
+The Git integration provides:
+
+- Repository initialization and cloning
+- Staging and committing changes
+- Branch management
+- Remote repository operations (push, pull, fetch)
+- Commit history viewing
+- Diff viewing and change tracking
+- `.gitignore` and `.gitattributes` support
+
+<Note>
+Git operations are powered by JGit, a pure Java implementation of Git that runs natively on Android.
+</Note>
+
+## Getting Started
+
+### Initialize a Repository
+
+Create a new Git repository for your project:
+
+<Steps>
+  <Step title="Open Git Menu">
+    Navigate to Tools > Git or tap the Git icon in the toolbar
+  </Step>
+  
+  <Step title="Initialize Repository">
+    Select "Initialize Repository" to create a new Git repo
+  </Step>
+  
+  <Step title="Set Default Branch">
+    Choose your default branch name (e.g., "main" or "master")
+  </Step>
+  
+  <Step title="Configure User">
+    Set your Git username and email for commits
+  </Step>
+</Steps>
+
+<CodeGroup>
+```bash Via Terminal
+# Initialize repository
+cd ~/projects/MyApp
+git init
+
+# Set user configuration
+git config user.name "Your Name"
+git config user.email "your.email@example.com"
+```
+
+```kotlin Programmatic
+// GitManager API (internal)
+val gitManager = GitManager(projectPath)
+gitManager.initRepository("main")
+gitManager.setUserConfig("Your Name", "your.email@example.com")
+```
+</CodeGroup>
+
+### Clone a Repository
+
+Clone an existing repository from a remote URL:
+
+<Steps>
+  <Step title="Select Clone">
+    Choose Git > Clone Repository from the menu
+  </Step>
+  
+  <Step title="Enter Repository URL">
+    Provide the Git repository URL (HTTPS or SSH)
+  </Step>
+  
+  <Step title="Choose Location">
+    Select the local directory for the cloned project
+  </Step>
+  
+  <Step title="Enter Credentials">
+    Provide username and password/token if required
+  </Step>
+</Steps>
+
+```bash Clone Examples
+# HTTPS
+https://github.com/username/repository.git
+
+# SSH
+git@github.com:username/repository.git
+```
+
+<Tip>
+For GitHub, use a Personal Access Token instead of your password for HTTPS authentication.
+</Tip>
+
+## Making Commits
+
+### View Changes
+
+See what files have been modified:
+
+<Steps>
+  <Step title="Open Git Status">
+    Navigate to Git > Status or view the Git panel
+  </Step>
+  
+  <Step title="Review Changes">
+    View modified, added, deleted, and untracked files
+  </Step>
+  
+  <Step title="Check Diff">
+    Tap on a file to see the detailed diff of changes
+  </Step>
+</Steps>
+
+**Change Types:**
+- **Modified** - Existing files with changes
+- **Added** - New files staged for commit
+- **Deleted** - Files removed from the project
+- **Untracked** - New files not yet added to Git
+- **Conflicting** - Files with merge conflicts
+
+### Stage Changes
+
+Add changes to the staging area:
+
+<CodeGroup>
+```bash Stage Specific Files
+# Stage a single file
+git add path/to/file.java
+
+# Stage multiple files
+git add src/MainActivity.java res/layout/activity_main.xml
+```
+
+```bash Stage All Changes
+# Stage all modified and new files
+git add .
+
+# Stage all changes including deletions
+git add -A
+```
+
+```bash Stage by Pattern
+# Stage all Java files
+git add *.java
+
+# Stage all files in directory
+git add src/main/java/com/myapp/
+```
+</CodeGroup>
+
+### Create Commits
+
+Commit staged changes to the repository:
+
+<Steps>
+  <Step title="Stage Your Changes">
+    Ensure all desired changes are staged
+  </Step>
+  
+  <Step title="Write Commit Message">
+    Enter a clear, descriptive commit message
+  </Step>
+  
+  <Step title="Commit">
+    Tap "Commit" to save changes to the repository
+  </Step>
+</Steps>
+
+```bash Commit Message Best Practices
+# Good commit message format:
+Add user authentication feature
+
+- Implement login screen
+- Add password validation
+- Integrate with backend API
+
+# Short messages for simple changes:
+Fix typo in MainActivity
+
+Update dependencies to latest versions
+```
+
+<Tip>
+Write meaningful commit messages that explain **why** the change was made, not just **what** changed.
+</Tip>
+
+## Branch Management
+
+### View Branches
+
+See all available branches in your repository:
+
+```bash List Branches
+# View local branches
+git branch
+
+# View all branches (local + remote)
+git branch -a
+```
+
+### Create Branches
+
+Create new branches for features or bug fixes:
+
+<Steps>
+  <Step title="Open Branch Menu">
+    Navigate to Git > Branches
+  </Step>
+  
+  <Step title="Create New Branch">
+    Select "New Branch" and enter a branch name
+  </Step>
+  
+  <Step title="Switch to Branch">
+    The new branch is automatically checked out
+  </Step>
+</Steps>
+
+<CodeGroup>
+```bash Create Branch
+# Create and switch to new branch
+git checkout -b feature/new-ui
+
+# Create branch without switching
+git branch feature/new-ui
+```
+
+```bash Branch Naming Conventions
+feature/user-profile
+fix/login-bug
+hotfix/crash-on-startup
+release/v1.2.0
+```
+</CodeGroup>
+
+### Switch Branches
+
+Move between branches:
+
+```bash Switch Branches
+# Switch to existing branch
+git checkout main
+git checkout feature/new-ui
+
+# Switch to previous branch
+git checkout -
+```
+
+<Warning>
+Commit or stash your changes before switching branches to avoid losing work.
+</Warning>
+
+### Delete Branches
+
+Remove branches that are no longer needed:
+
+```bash Delete Branch
+# Delete local branch (must not be current branch)
+git branch -d feature/completed-feature
+
+# Force delete unmerged branch
+git branch -D feature/abandoned-feature
+```
+
+## Remote Operations
+
+### Add Remote
+
+Connect your local repository to a remote:
+
+<CodeGroup>
+```bash Add Remote
+# Add remote repository
+git remote add origin https://github.com/username/repo.git
+
+# Verify remote
+git remote -v
+```
+
+```bash Multiple Remotes
+# Add additional remotes
+git remote add upstream https://github.com/original/repo.git
+git remote add backup https://gitlab.com/username/repo.git
+```
+</CodeGroup>
+
+### Push Changes
+
+Upload local commits to remote repository:
+
+<Steps>
+  <Step title="Commit Local Changes">
+    Ensure all changes are committed locally
+  </Step>
+  
+  <Step title="Select Push">
+    Choose Git > Push from the menu
+  </Step>
+  
+  <Step title="Select Branch">
+    Choose the branch to push
+  </Step>
+  
+  <Step title="Enter Credentials">
+    Provide authentication if required
+  </Step>
+</Steps>
+
+```bash Push Commands
+# Push current branch to origin
+git push origin main
+
+# Push and set upstream tracking
+git push -u origin feature/new-feature
+
+# Push all branches
+git push --all origin
+```
+
+### Pull Changes
+
+Download and merge changes from remote:
+
+```bash Pull Changes
+# Pull from default remote/branch
+git pull
+
+# Pull from specific remote/branch
+git pull origin main
+
+# Pull and rebase instead of merge
+git pull --rebase origin main
+```
+
+<Note>
+Pull operations fetch remote changes and automatically merge them into your current branch.
+</Note>
+
+### Fetch Updates
+
+Download remote changes without merging:
+
+```bash Fetch Changes
+# Fetch from all remotes
+git fetch --all
+
+# Fetch from specific remote
+git fetch origin
+
+# View fetched changes
+git log HEAD..origin/main
+```
+
+## Viewing History
+
+### Commit Log
+
+View the commit history of your repository:
+
+<CodeGroup>
+```bash View History
+# View recent commits
+git log
+
+# View compact history
+git log --oneline
+
+# View last N commits
+git log -10
+```
+
+```bash Detailed History
+# Show commit details with diffs
+git log -p
+
+# Show file changes
+git log --stat
+
+# Show graph of branches
+git log --graph --oneline --all
+```
+</CodeGroup>
+
+**Commit Information Displayed:**
+- Commit hash (full and short)
+- Author name and email
+- Commit date and time
+- Commit message
+- Changed files
+
+### File History
+
+View the history of a specific file:
+
+```bash File History
+# View commits affecting a file
+git log -- path/to/file.java
+
+# View changes to file
+git log -p -- path/to/file.java
+```
+
+## Advanced Features
+
+### Discard Changes
+
+Revert uncommitted changes:
+
+```bash Discard Changes
+# Discard changes to specific file
+git checkout -- path/to/file.java
+
+# Discard all changes
+git checkout -- .
+```
+
+<Warning>
+Discarding changes is permanent and cannot be undone!
+</Warning>
+
+### Unstage Files
+
+Remove files from staging area:
+
+```bash Unstage Files
+# Unstage specific file
+git reset HEAD path/to/file.java
+
+# Unstage all files
+git reset HEAD .
+```
+
+### .gitignore Support
+
+The IDE respects `.gitignore` files:
+
+```bash Common .gitignore Entries
+# Build outputs
+build/
+*.apk
+*.aab
+
+# IDE files
+.idea/
+.gradle/
+local.properties
+
+# Generated files
+*.class
+*.dex
+*.log
+```
+
+<Tip>
+Add sensitive files like API keys and credentials to `.gitignore` to prevent accidental commits.
+</Tip>
+
+### Conflict Resolution
+
+When merge conflicts occur:
+
+<Steps>
+  <Step title="Identify Conflicts">
+    Git marks files with conflicts as "Conflicting"
+  </Step>
+  
+  <Step title="Open Conflicted File">
+    Edit the file to resolve conflict markers
+  </Step>
+  
+  <Step title="Remove Conflict Markers">
+    Delete `<<<<<<<`, `=======`, and `>>>>>>>` lines
+  </Step>
+  
+  <Step title="Stage Resolved File">
+    Add the resolved file to staging
+  </Step>
+  
+  <Step title="Complete Merge">
+    Commit the merge resolution
+  </Step>
+</Steps>
+
+```bash Conflict Markers
+<<<<<<< HEAD
+Your local changes
+=======
+Incoming changes from remote
+>>>>>>> branch-name
+```
+
+## Authentication
+
+### HTTPS Authentication
+
+For HTTPS remotes:
+
+- **Username**: Your GitHub/GitLab username
+- **Password**: Personal Access Token (PAT)
+
+<Tip>
+**GitHub:** Generate tokens at Settings > Developer settings > Personal access tokens
+
+**GitLab:** Generate tokens at User Settings > Access Tokens
+</Tip>
+
+### SSH Authentication
+
+SSH support may be limited on Android. Use HTTPS with tokens for best compatibility.
+
+## Troubleshooting
+
+### Push Rejected
+
+```bash Error
+! [rejected] main -> main (non-fast-forward)
+```
+
+**Solution:**
+```bash
+# Pull remote changes first
+git pull origin main
+
+# Resolve any conflicts
+
+# Push again
+git push origin main
+```
+
+### Authentication Failed
+
+If authentication fails:
+
+- Verify username and password/token
+- Check token permissions (needs repo access)
+- Try generating a new access token
+- Ensure no typos in repository URL
+
+### Repository Not Found
+
+Double-check:
+- Repository URL is correct
+- You have access to the repository
+- Repository exists and is not deleted
+- Network connection is stable
+
+### Large File Warnings
+
+<Warning>
+Git is not optimized for large binary files. Consider using Git LFS for files over 50MB.
+</Warning>
+
+## Best Practices
+
+<Tip>
+**Commit Frequently**
+- Make small, focused commits
+- Commit working code, not broken code
+- Write descriptive commit messages
+
+**Branch Strategy**
+- Use branches for features and fixes
+- Keep main/master branch stable
+- Delete merged branches
+
+**Before Pushing**
+- Review your changes
+- Test your code
+- Pull latest changes
+- Resolve conflicts locally
+
+**Security**
+- Never commit secrets or API keys
+- Use `.gitignore` for sensitive files
+- Review changes before committing
+</Tip>

@@ -1,0 +1,510 @@
+---
+title: 'Project Management'
+description: 'Comprehensive project and workspace management for Android development'
+icon: 'folder-tree'
+---
+
+## Overview
+
+Android Code Studio provides a robust project management system that handles Gradle-based Android projects with full support for multi-module builds, dependency resolution, and workspace configuration.
+
+## Architecture
+
+The project management system is built around two core interfaces:
+
+<CardGroup cols={2}>
+  <Card title="IProjectManager" icon="folder-gear">
+    Main entry point for project operations, initialization, and lifecycle management
+  </Card>
+  <Card title="IWorkspace" icon="sitemap">
+    Represents the complete project structure with all modules and dependencies
+  </Card>
+</CardGroup>
+
+## Project Manager
+
+The `IProjectManager` interface provides centralized project management:
+
+```kotlin
+interface IProjectManager {
+  // Project directory access
+  val projectDir: File
+  val projectDirPath: String
+  
+  // Synchronization issues
+  val projectSyncIssues: ProjectSyncIssues?
+  
+  // Project operations
+  fun openProject(directory: File)
+  fun openProject(path: String)
+  
+  // Setup with Tooling API
+  suspend fun setupProject(
+    project: IProject = Lookup.getDefault()
+      .lookup(BuildService.KEY_PROJECT_PROXY)!!
+  )
+  
+  // Workspace access
+  fun getWorkspace(): IWorkspace?
+  fun requireWorkspace(): IWorkspace
+  
+  // File change notifications
+  fun notifyFileCreated(file: File)
+  fun notifyFileDeleted(file: File)
+  fun notifyFileRenamed(from: File, to: File)
+  
+  // Lifecycle
+  fun destroy()
+}
+```
+
+### Getting the Project Manager
+
+```kotlin
+// Singleton access
+val projectManager = IProjectManager.getInstance()
+
+// Open a project
+projectManager.openProject("/storage/emulated/0/MyAndroidApp")
+
+// Setup project with Tooling API
+projectManager.setupProject()
+
+// Access workspace
+val workspace = projectManager.requireWorkspace()
+```
+
+<Note>
+  The Project Manager uses the ServiceLoader pattern for dependency injection,
+  making it easy to test and extend.
+</Note>
+
+## Workspace
+
+The `IWorkspace` interface represents the complete project structure:
+
+```kotlin
+interface IWorkspace {
+  // Project access
+  fun getProjectDir(): File
+  fun getRootProject(): GradleProject
+  fun getSubProjects(): List<GradleProject>
+  
+  // Project lookup
+  fun findProject(path: String): GradleProject?
+  fun getProject(path: String): GradleProject
+  
+  // Android modules
+  fun androidProjects(): Sequence<AndroidModule>
+  
+  // Build variant selections
+  fun getAndroidVariantSelections(): Map<String, BuildVariantInfo>
+  
+  // Sync issues
+  fun getProjectSyncIssues(): ProjectSyncIssues
+  
+  // File lookups
+  fun findModuleForFile(file: Path, checkExistance: Boolean = false): ModuleProject?
+  fun findModuleForFile(file: File, checkExistance: Boolean = false): ModuleProject?
+  fun containsSourceFile(file: Path): Boolean
+  fun isAndroidResource(file: File): Boolean
+}
+```
+
+### Working with Projects
+
+<Tabs>
+  <Tab title="Find Projects">
+    ```kotlin
+    // Get root project
+    val rootProject = workspace.getRootProject()
+    
+    // Get all subprojects
+    val subprojects = workspace.getSubProjects()
+    
+    // Find specific project by path
+    val appProject = workspace.findProject(":app")
+    if (appProject != null) {
+      // Work with project
+    }
+    
+    // Get project (throws if not found)
+    try {
+      val libProject = workspace.getProject(":library")
+    } catch (e: IWorkspace.ProjectNotFoundException) {
+      // Handle missing project
+    }
+    ```
+  </Tab>
+  <Tab title="Android Modules">
+    ```kotlin
+    // Get all Android modules
+    workspace.androidProjects().forEach { androidModule ->
+      println("Module: ${androidModule.path}")
+      println("Package: ${androidModule.namespace}")
+      println("Build variant: ${androidModule.buildVariant}")
+    }
+    
+    // Check build variant selections
+    val selections = workspace.getAndroidVariantSelections()
+    selections.forEach { (modulePath, variantInfo) ->
+      println("$modulePath: ${variantInfo.variant}")
+    }
+    ```
+  </Tab>
+  <Tab title="File Modules">
+    ```kotlin
+    // Find module containing a file
+    val file = File("/path/to/MainActivity.kt")
+    val module = workspace.findModuleForFile(file)
+    
+    if (module != null) {
+      println("File belongs to: ${module.path}")
+    }
+    
+    // Check if file is a source file
+    val isSource = workspace.containsSourceFile(file.toPath())
+    
+    // Check if file is an Android resource
+    val isResource = workspace.isAndroidResource(file)
+    ```
+  </Tab>
+</Tabs>
+
+## Module Projects
+
+The workspace contains different types of module projects:
+
+### Gradle Project
+
+```kotlin
+abstract class GradleProject {
+  abstract val path: String
+  abstract val name: String
+  abstract val description: String
+  abstract val projectDir: File
+  abstract val buildDir: File
+  abstract val buildScript: File
+  abstract val tasks: List<TaskModel>
+}
+```
+
+### Android Module
+
+```kotlin
+class AndroidModule : ModuleProject {
+  val namespace: String
+  val buildVariant: String
+  val androidProject: AndroidProject
+  
+  // Source sets
+  val sourceSets: List<SourceSet>
+  
+  // Resources
+  val resourceDirs: List<File>
+  
+  // Build configuration
+  val compileSdkVersion: String
+  val minSdkVersion: Int
+  val targetSdkVersion: Int
+}
+```
+
+### Java Module
+
+```kotlin
+class JavaModule : ModuleProject {
+  // Java-specific configuration
+  val sourceCompatibility: String
+  val targetCompatibility: String
+  val sourceSets: List<SourceSet>
+}
+```
+
+<Accordion title="Module Types">
+  Android Code Studio supports various Gradle project types:
+  
+  - **Android Application** - Main app modules with manifest
+  - **Android Library** - Reusable Android libraries
+  - **Java Library** - Pure Java/Kotlin modules
+  - **Dynamic Feature** - Dynamic feature modules
+</Accordion>
+
+## File Management
+
+The `FileManager` handles file operations and change notifications:
+
+```kotlin
+class FileManager {
+  // File change tracking
+  fun notifyFileCreated(file: File)
+  fun notifyFileDeleted(file: File)
+  fun notifyFileRenamed(from: File, to: File)
+  
+  // File operations
+  fun readFile(file: File): String
+  fun writeFile(file: File, content: String)
+  fun createFile(file: File): Boolean
+  fun deleteFile(file: File): Boolean
+}
+```
+
+### File Change Notifications
+
+<Warning>
+  Always notify the project manager of file changes to keep the workspace in sync:
+</Warning>
+
+```kotlin
+// Create a new file
+val newFile = File(projectDir, "src/main/java/com/example/NewClass.kt")
+if (newFile.createNewFile()) {
+  projectManager.notifyFileCreated(newFile)
+}
+
+// Delete a file
+if (file.delete()) {
+  projectManager.notifyFileDeleted(file)
+}
+
+// Rename a file
+val oldFile = File(projectDir, "OldName.kt")
+val newFile = File(projectDir, "NewName.kt")
+if (oldFile.renameTo(newFile)) {
+  projectManager.notifyFileRenamed(oldFile, newFile)
+}
+```
+
+## Classpath Management
+
+Android Code Studio provides advanced classpath resolution:
+
+<CardGroup cols={2}>
+  <Card title="ZipFileClasspathReader" icon="file-zipper">
+    Read classes from JAR and AAR files
+  </Card>
+  <Card title="JarFsClasspathReader" icon="java">
+    Java FileSystem-based classpath reading
+  </Card>
+  <Card title="VersionCatalogClasspathProvider" icon="book">
+    Gradle version catalog support
+  </Card>
+  <Card title="BootClasspathProvider" icon="android">
+    Android SDK boot classpath resolution
+  </Card>
+</CardGroup>
+
+### Classpath API
+
+```kotlin
+interface IClasspathReader {
+  fun readClasses(path: Path): Sequence<ClassInfo>
+}
+
+data class ClassInfo(
+  val name: String,
+  val packageName: String,
+  val isPublic: Boolean,
+  val isAbstract: Boolean,
+  val isInterface: Boolean,
+  val methods: List<MethodInfo>,
+  val fields: List<FieldInfo>
+)
+```
+
+## Version Catalog Support
+
+Android Code Studio supports Gradle version catalogs:
+
+```kotlin
+class VersionCatalogParser {
+  fun parse(catalogFile: File): VersionCatalog
+}
+
+data class VersionCatalog(
+  val versions: Map<String, String>,
+  val libraries: Map<String, LibraryDependency>,
+  val plugins: Map<String, PluginDependency>
+)
+```
+
+### Using Version Catalogs
+
+```kotlin
+// Parse version catalog
+val catalogFile = File(projectDir, "gradle/libs.versions.toml")
+val parser = VersionCatalogParser()
+val catalog = parser.parse(catalogFile)
+
+// Access dependencies
+val androidxCore = catalog.libraries["androidx-core-ktx"]
+println("Version: ${androidxCore?.version}")
+```
+
+## Build Service Integration
+
+The project manager integrates with the Gradle Tooling API through `BuildService`:
+
+```kotlin
+interface BuildService {
+  val isBuildInProgress: Boolean
+  
+  // Server status
+  fun isToolingServerStarted(): Boolean
+  fun metadata(): CompletableFuture<ToolingServerMetadata>
+  
+  // Project initialization
+  fun initializeProject(
+    params: InitializeProjectParams
+  ): CompletableFuture<InitializeResult>
+  
+  // Task execution
+  fun executeTasks(
+    vararg tasks: String
+  ): CompletableFuture<TaskExecutionResult>
+  
+  // Build cancellation
+  fun cancelCurrentBuild(): CompletableFuture<BuildCancellationRequestResult>
+}
+```
+
+### Build Operations
+
+<Tabs>
+  <Tab title="Initialize">
+    ```kotlin
+    val buildService = Lookup.getDefault()
+      .lookup(BuildService.KEY_BUILD_SERVICE)
+    
+    val params = InitializeProjectParams(
+      projectDir = projectDir,
+      gradleInstallation = gradleHome
+    )
+    
+    buildService.initializeProject(params)
+      .thenAccept { result ->
+        println("Project initialized: ${result.success}")
+      }
+    ```
+  </Tab>
+  <Tab title="Execute Tasks">
+    ```kotlin
+    // Execute Gradle tasks
+    buildService.executeTasks("clean", "assembleDebug")
+      .thenAccept { result ->
+        println("Build result: ${result.isSuccessful}")
+        result.tasks.forEach { task ->
+          println("${task.path}: ${task.result}")
+        }
+      }
+    ```
+  </Tab>
+  <Tab title="Cancel Build">
+    ```kotlin
+    // Cancel running build
+    if (buildService.isBuildInProgress) {
+      buildService.cancelCurrentBuild()
+        .thenAccept { result ->
+          if (result.success) {
+            println("Build cancelled")
+          }
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Project Synchronization
+
+Handle project synchronization and issues:
+
+```kotlin
+// Check for sync issues
+val syncIssues = workspace.getProjectSyncIssues()
+
+if (syncIssues.hasErrors()) {
+  syncIssues.errors.forEach { error ->
+    println("Error: ${error.message}")
+    println("Location: ${error.location}")
+  }
+}
+
+if (syncIssues.hasWarnings()) {
+  syncIssues.warnings.forEach { warning ->
+    println("Warning: ${warning.message}")
+  }
+}
+```
+
+<Note>
+  Project synchronization issues are collected during Gradle sync and can be
+  displayed to users for troubleshooting.
+</Note>
+
+## Active Document Tracking
+
+Track currently opened files:
+
+```kotlin
+data class ActiveDocument(
+  val file: File,
+  val content: String,
+  val version: Int
+)
+
+data class ActiveJavaDocument(
+  val file: File,
+  val content: String,
+  val version: Int,
+  val module: JavaModule
+) : ActiveDocument
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Workspace API" icon="sitemap">
+    Access projects through the workspace for consistency
+  </Card>
+  <Card title="Notify Changes" icon="bell">
+    Always notify the project manager of file system changes
+  </Card>
+  <Card title="Handle Exceptions" icon="triangle-exclamation">
+    Check for ProjectNotFoundException when accessing projects
+  </Card>
+  <Card title="Check Build Status" icon="spinner">
+    Verify build status before executing tasks
+  </Card>
+</CardGroup>
+
+## Error Handling
+
+```kotlin
+// Handle workspace not configured
+try {
+  val workspace = projectManager.requireWorkspace()
+} catch (e: IWorkspace.NotConfiguredException) {
+  // Workspace not ready, initialize project first
+  projectManager.openProject(projectDir)
+  projectManager.setupProject()
+}
+
+// Handle project not found
+try {
+  val project = workspace.getProject(":nonexistent")
+} catch (e: IWorkspace.ProjectNotFoundException) {
+  // Project doesn't exist in workspace
+  println("Project not found: ${e.message}")
+}
+```
+
+<Tip>
+  The project management system is designed to be thread-safe and can handle
+  concurrent operations from multiple components.
+</Tip>
+
+## Related Features
+
+- [Gradle Build System](/features/gradle-build-system) - Build and task execution
+- [Language Servers](/features/language-servers) - Code intelligence integration
+- [Code Editor](/features/code-editor) - File editing capabilities

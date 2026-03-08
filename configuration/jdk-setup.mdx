@@ -1,0 +1,360 @@
+---
+title: JDK Setup
+description: Configure and manage JDK installations in Android Code Studio
+icon: coffee
+---
+
+Android Code Studio supports multiple JDK installations, allowing you to choose the appropriate Java version for your projects.
+
+## Supported JDK Versions
+
+Android Code Studio includes support for:
+- **JDK 11** - For projects using Android Gradle Plugin 7.x
+- **JDK 17** (Recommended) - For projects using Android Gradle Plugin 8.x and newer
+- **JDK 21** - For cutting-edge development
+
+<Note>
+  JDK 17 is the default and recommended version for most Android development.
+</Note>
+
+## JDK Installation Location
+
+JDK installations are located in:
+```bash
+$PREFIX/lib/jvm/
+```
+
+Example paths:
+- `/data/data/com.tom.rv2ide/files/usr/lib/jvm/java-17-openjdk`
+- `/data/data/com.tom.rv2ide/files/usr/lib/jvm/java-21-openjdk`
+
+## Configuring JDK Version
+
+### Via Preferences UI
+
+<Steps>
+  <Step title="Open Preferences">
+    Navigate to **Settings** > **Build & Run** > **Gradle Options**
+  </Step>
+  
+  <Step title="Select JDK Version">
+    Tap on **JDK Version** preference
+    
+    You'll see a list of installed JDK distributions with their version numbers.
+  </Step>
+  
+  <Step title="Choose Version">
+    Select your preferred JDK version from the list
+    
+    The IDE will immediately update the `JAVA_HOME` environment variable.
+  </Step>
+</Steps>
+
+### Via Configuration File
+
+The JDK preference is stored as:
+
+<ParamField path="ide.build.javaHome" type="string">
+  **Java Home Path** - Full path to the selected JDK installation
+  
+  Example value: `/data/data/com.tom.rv2ide/files/usr/lib/jvm/java-17-openjdk`
+</ParamField>
+
+## JDK Detection
+
+The IDE automatically detects installed JDK distributions using the following process:
+
+<Steps>
+  <Step title="Scan Installation Directory">
+    Scans `$PREFIX/lib/jvm/` for JDK installations
+    
+    ```kotlin
+    val optDir = File(Environment.PREFIX, "lib/jvm")
+    optDir.listFiles()
+    ```
+  </Step>
+  
+  <Step title="Validate Installation">
+    Checks for valid `bin/java` executable:
+    
+    - File exists
+    - Is a regular file (not a symlink)
+    - Has executable permissions
+  </Step>
+  
+  <Step title="Extract Version Information">
+    Executes the Java binary to get version details:
+    
+    ```bash
+    java -XshowSettings:properties -version
+    ```
+    
+    Extracts:
+    - `java.version` - Version string (e.g., "17.0.7")
+    - `java.home` - Actual installation path
+  </Step>
+  
+  <Step title="Create Distribution Entry">
+    Creates a `JdkDistribution` object:
+    
+    ```kotlin
+    data class JdkDistribution(
+      val javaVersion: String,
+      val javaHome: String
+    )
+    ```
+  </Step>
+</Steps>
+
+## Default JDK Selection
+
+On first launch, the IDE automatically selects a default JDK:
+
+1. **Prefers JDK 17** if available (recommended for Android development)
+2. **Falls back to first available** JDK if JDK 17 is not installed
+3. **Validates selection** to ensure the installation is functional
+
+```kotlin
+var defaultDist = distributions.find {
+  it.javaVersion.startsWith("17")
+}
+
+if (defaultDist == null) {
+  defaultDist = distributions[0]
+}
+```
+
+## Environment Variables
+
+The selected JDK sets the following environment variables:
+
+<CodeGroup>
+```bash Build Environment
+# Core Java environment
+export JAVA_HOME="/data/data/com.tom.rv2ide/files/usr/lib/jvm/java-17-openjdk"
+export JAVA="$JAVA_HOME/bin/java"
+
+# Library path for native libraries
+export LD_LIBRARY_PATH="$PREFIX/lib:$JAVA_HOME/lib"
+```
+
+```bash Gradle Environment
+# Gradle uses JAVA_HOME for builds
+export JAVA_HOME="/data/data/com.tom.rv2ide/files/usr/lib/jvm/java-17-openjdk"
+
+# Gradle user home
+export GRADLE_USER_HOME="$HOME/.gradle"
+```
+</CodeGroup>
+
+## Installing Additional JDK Versions
+
+Android Code Studio uses Termux packages for JDK installations.
+
+<Steps>
+  <Step title="Open Terminal">
+    Open the IDE terminal (bottom panel)
+  </Step>
+  
+  <Step title="Install via pkg">
+    Use the `pkg` command to install JDK packages:
+    
+    ```bash
+    # Install JDK 17 (recommended)
+    pkg install openjdk-17
+    
+    # Or install JDK 21
+    pkg install openjdk-21
+    ```
+    
+    <Note>
+      Installation requires an internet connection and may take several minutes.
+    </Note>
+  </Step>
+  
+  <Step title="Restart IDE">
+    Restart Android Code Studio to detect the new JDK installation
+    
+    The new version will appear in the JDK selection list.
+  </Step>
+</Steps>
+
+## Switching JDK Versions
+
+### When to Switch
+
+Switch JDK versions based on your project requirements:
+
+| Android Gradle Plugin | Minimum JDK | Recommended JDK |
+|-----------------------|-------------|------------------|
+| AGP 7.0 - 7.4        | JDK 11      | JDK 11          |
+| AGP 8.0+             | JDK 17      | JDK 17          |
+| AGP 8.4+             | JDK 17      | JDK 21          |
+
+<Warning>
+  Using an incompatible JDK version may cause build failures. Check your project's `build.gradle` file for AGP version.
+</Warning>
+
+### Switching Process
+
+<Steps>
+  <Step title="Check Current Version">
+    Verify current JDK version in terminal:
+    
+    ```bash
+    java -version
+    echo $JAVA_HOME
+    ```
+  </Step>
+  
+  <Step title="Change in Preferences">
+    Go to Settings > Build & Run > JDK Version
+    
+    Select the desired version from the list
+  </Step>
+  
+  <Step title="Verify Change">
+    The change takes effect immediately. Verify in terminal:
+    
+    ```bash
+    java -version
+    ```
+  </Step>
+  
+  <Step title="Clean and Rebuild">
+    For existing projects, clean and rebuild:
+    
+    ```bash
+    ./gradlew clean build
+    ```
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### JDK Not Detected
+
+If a JDK installation is not detected:
+
+<Steps>
+  <Step title="Verify Installation">
+    Check that the JDK is installed:
+    
+    ```bash
+    ls -la $PREFIX/lib/jvm/
+    ```
+  </Step>
+  
+  <Step title="Check Java Binary">
+    Ensure the java binary exists and is executable:
+    
+    ```bash
+    ls -la $PREFIX/lib/jvm/java-17-openjdk/bin/java
+    chmod +x $PREFIX/lib/jvm/java-17-openjdk/bin/java
+    ```
+  </Step>
+  
+  <Step title="Restart IDE">
+    Close and reopen Android Code Studio to trigger JDK detection
+  </Step>
+</Steps>
+
+### Build Fails with JDK Error
+
+If builds fail with JDK-related errors:
+
+1. **Check AGP Compatibility**
+   ```gradle
+   // In build.gradle
+   dependencies {
+       classpath 'com.android.tools.build:gradle:8.1.0' // Check version
+   }
+   ```
+
+2. **Verify JAVA_HOME**
+   ```bash
+   echo $JAVA_HOME
+   $JAVA_HOME/bin/java -version
+   ```
+
+3. **Clear Gradle Cache**
+   ```bash
+   rm -rf ~/.gradle/caches/
+   ./gradlew clean
+   ```
+
+### Multiple JDK Versions Not Showing
+
+If only one JDK appears despite multiple installations:
+
+```bash
+# List all JDK directories
+ls -la $PREFIX/lib/jvm/
+
+# Check for symbolic links (these are ignored)
+file $PREFIX/lib/jvm/*
+
+# Ensure each has a valid java binary
+for jdk in $PREFIX/lib/jvm/*/; do
+  echo "Checking $jdk"
+  ls -l "${jdk}bin/java"
+done
+```
+
+<Note>
+  Symbolic links are intentionally ignored during JDK detection to avoid duplicate entries.
+</Note>
+
+## JDK Configuration Best Practices
+
+<Tip>
+  **Keep JDK 17 Installed** - JDK 17 is the most compatible version for modern Android development and should always be available.
+</Tip>
+
+<Tip>
+  **Match Project Requirements** - Always use the JDK version required by your project's Android Gradle Plugin version.
+</Tip>
+
+<Tip>
+  **Update Regularly** - Keep your JDK installations updated through `pkg update && pkg upgrade`.
+</Tip>
+
+## Advanced Configuration
+
+### Custom JDK Installation
+
+To use a custom JDK installation:
+
+1. **Install JDK** to `$PREFIX/lib/jvm/custom-jdk/`
+2. **Ensure Structure**:
+   ```
+   custom-jdk/
+   ├── bin/
+   │   └── java (executable)
+   ├── lib/
+   └── ...
+   ```
+3. **Set Permissions**:
+   ```bash
+   chmod +x $PREFIX/lib/jvm/custom-jdk/bin/java
+   ```
+4. **Restart IDE** to detect the new installation
+
+### Per-Project JDK (gradle.properties)
+
+While the IDE sets a global JAVA_HOME, you can override it per-project:
+
+```properties
+# In gradle.properties
+org.gradle.java.home=/data/data/com.tom.rv2ide/files/usr/lib/jvm/java-21-openjdk
+```
+
+<Warning>
+  This overrides the IDE's JDK selection for Gradle builds only. Language servers will still use the IDE's configured JDK.
+</Warning>
+
+## Related Topics
+
+- [Build Configuration](/configuration/build-gradle)
+- [SDK & NDK Setup](/configuration/sdk-ndk)
+- [Environment Variables](/advanced/environment)

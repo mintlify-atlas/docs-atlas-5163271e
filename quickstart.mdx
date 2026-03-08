@@ -1,80 +1,564 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart Guide
+description: Create, edit, and build your first Android application with Android Code Studio
 ---
 
-## Get started in three steps
+This guide will walk you through creating your first Android project, writing code, and building an APK - all on your Android device.
 
-Get your documentation site running locally and make your first customization.
+## Prerequisites
 
-### Step 1: Set up your local environment
+Before starting, ensure you have:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+- Completed the [installation](/installation) process
+- Installed Android build tools through the onboarding process
+- Granted necessary storage permissions
+- At least 2GB of free storage space for your project
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Android Code Studio requires Android Gradle Plugin (AGP) v7.2.0 or newer. The IDE automatically creates projects with compatible versions.
 </Note>
+
+## Creating Your First Project
+
+<Steps>
+  <Step title="Open Project Wizard">
+    1. Launch Android Code Studio
+    2. On the main screen, tap **Create New Project** or the **+** button
+    3. The project creation wizard will open
+    
+    <Tip>
+    If you already have projects open, access the wizard via **File** > **New** > **New Project**.
+    </Tip>
+  </Step>
+
+  <Step title="Select a Template">
+    Choose from several project templates:
+    
+    - **Empty Activity** - Basic activity with minimal UI (recommended for beginners)
+    - **Basic Activity** - Activity with a toolbar and floating action button
+    - **Bottom Navigation Activity** - Three-fragment app with bottom navigation
+    - **Navigation Drawer Activity** - Side navigation drawer with multiple fragments
+    - **Tabbed Activity** - ViewPager-based tabbed interface
+    - **Compose Empty Activity** - Jetpack Compose-based activity
+    - **Native C++ Activity** - Activity with C++ JNI support
+    - **No Activity** - Empty project with no default activity
+    
+    For this guide, select **Empty Activity** and tap **Next**.
+  </Step>
+
+  <Step title="Configure Your Project">
+    Fill in the project details:
+    
+    - **Name**: Enter your app name (e.g., "My First App")
+    - **Package name**: Enter a unique package name (e.g., "com.example.myfirstapp")
+    - **Save location**: Choose where to save your project (default: `/sdcard/AndroidCodeStudio/projects/`)
+    - **Language**: Select **Kotlin** or **Java**
+    - **Minimum SDK**: Choose minimum Android version (API 21+ recommended)
+    - **Use AndroidX**: Keep this enabled (recommended)
+    
+    <Warning>
+    The package name must be unique and follow Java naming conventions (e.g., com.company.app). It cannot be changed after project creation.
+    </Warning>
+    
+    Tap **Finish** to create your project.
+  </Step>
+
+  <Step title="Wait for Project Initialization">
+    Android Code Studio will:
+    
+    1. Generate project structure and files
+    2. Create Gradle build scripts
+    3. Configure project dependencies
+    4. Perform initial Gradle sync
+    
+    This process takes 2-5 minutes on first project creation. Subsequent projects initialize faster.
+    
+    <Note>
+    The first Gradle sync downloads required dependencies and may take longer depending on your internet speed.
+    </Note>
+  </Step>
+</Steps>
+
+## Understanding Project Structure
+
+After project creation, you'll see the following structure:
+
+```
+MyFirstApp/
+├── app/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/com/example/myfirstapp/
+│   │   │   │   └── MainActivity.kt
+│   │   │   ├── res/
+│   │   │   │   ├── layout/
+│   │   │   │   │   └── activity_main.xml
+│   │   │   │   ├── values/
+│   │   │   │   │   ├── strings.xml
+│   │   │   │   │   ├── colors.xml
+│   │   │   │   │   └── themes.xml
+│   │   │   │   └── drawable/
+│   │   │   └── AndroidManifest.xml
+│   │   └── androidTest/
+│   └── build.gradle.kts
+├── gradle/
+├── build.gradle.kts
+└── settings.gradle.kts
+```
+
+### Key Files
+
+- **MainActivity.kt** - The main activity class
+- **activity_main.xml** - The main layout file
+- **AndroidManifest.xml** - App configuration and permissions
+- **build.gradle.kts** - Module-level build configuration
+- **strings.xml** - String resources for localization
+
+## Editing Your First Activity
+
+Let's modify the default activity to display a custom message.
+
+<Steps>
+  <Step title="Open MainActivity">
+    1. In the project tree, expand **app** > **src** > **main** > **java**
+    2. Navigate to your package (e.g., **com.example.myfirstapp**)
+    3. Tap **MainActivity.kt** to open it in the editor
+    
+    You'll see code like this:
+    
+    ```kotlin MainActivity.kt
+    package com.example.myfirstapp
+    
+    import androidx.appcompat.app.AppCompatActivity
+    import android.os.Bundle
+    import com.example.myfirstapp.databinding.ActivityMainBinding
+    
+    public class MainActivity : AppCompatActivity() {
+    
+        private var _binding: ActivityMainBinding? = null
+        
+        private val binding: ActivityMainBinding
+          get() = checkNotNull(_binding) { "Activity has been destroyed" }
+        
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+    
+            // Inflate and get instance of binding
+            _binding = ActivityMainBinding.inflate(layoutInflater)
+    
+            // set content view to binding's root
+            setContentView(binding.root)
+        }
+        
+        override fun onDestroy() {
+            super.onDestroy()
+            _binding = null
+        }
+    }
+    ```
+    
+    <Note>
+    Android Code Studio uses View Binding by default, which provides type-safe access to views without `findViewById()`.
+    </Note>
+  </Step>
+
+  <Step title="Edit the Layout">
+    1. Open **res** > **layout** > **activity_main.xml**
+    2. You'll see the XML layout in the editor
+    3. Android Code Studio provides both XML editing and visual UI designer
+    
+    The default layout contains a TextView:
+    
+    ```xml activity_main.xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+    
+        <TextView
+            android:id="@+id/text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hello World!"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    
+    </androidx.constraintlayout.widget.ConstraintLayout>
+    ```
+    
+    <Tip>
+    Tap the **Designer** tab at the top to switch to the visual UI designer for drag-and-drop layout editing.
+    </Tip>
+  </Step>
+
+  <Step title="Use the UI Designer (Optional)">
+    Android Code Studio includes a powerful UI designer:
+    
+    1. Tap the **Designer** tab
+    2. Drag widgets from the palette onto the canvas
+    3. Adjust properties in the attributes panel
+    4. Add constraints by dragging connection points
+    
+    Features:
+    - Live layout preview
+    - Drag & drop interface
+    - Visual attribute editor
+    - Resource value auto-completion
+    - Real-time constraint visualization
+  </Step>
+</Steps>
+
+## Adding Functionality
+
+Let's add a button that shows a toast message when clicked.
+
+<Steps>
+  <Step title="Update the Layout">
+    Add a Button to **activity_main.xml**:
+    
+    ```xml activity_main.xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+    
+        <TextView
+            android:id="@+id/text_view"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hello World!"
+            android:textSize="18sp"
+            app:layout_constraintBottom_toTopOf="@+id/button"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+    
+        <Button
+            android:id="@+id/button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Click Me"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/text_view" />
+    
+    </androidx.constraintlayout.widget.ConstraintLayout>
+    ```
+  </Step>
+
+  <Step title="Add Click Listener">
+    Update **MainActivity.kt** to handle button clicks:
+    
+    ```kotlin MainActivity.kt
+    package com.example.myfirstapp
+    
+    import androidx.appcompat.app.AppCompatActivity
+    import android.os.Bundle
+    import android.widget.Toast
+    import com.example.myfirstapp.databinding.ActivityMainBinding
+    
+    public class MainActivity : AppCompatActivity() {
+    
+        private var _binding: ActivityMainBinding? = null
+        
+        private val binding: ActivityMainBinding
+          get() = checkNotNull(_binding) { "Activity has been destroyed" }
+        
+        override fun onCreate(savedInstanceState: Bundle?) {
+            super.onCreate(savedInstanceState)
+            _binding = ActivityMainBinding.inflate(layoutInflater)
+            setContentView(binding.root)
+            
+            // Add click listener to button
+            binding.button.setOnClickListener {
+                Toast.makeText(
+                    this,
+                    "Button clicked!",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+        
+        override fun onDestroy() {
+            super.onDestroy()
+            _binding = null
+        }
+    }
+    ```
+    
+    <Note>
+    View Binding automatically generates binding classes with properties for each view ID in your layout, providing null-safe and type-safe view access.
+    </Note>
+  </Step>
+</Steps>
+
+## Building Your Project
+
+<Steps>
+  <Step title="Save All Files">
+    Ensure all your changes are saved by tapping the **Save All** button or using **Ctrl+S**.
+  </Step>
+
+  <Step title="Start the Build">
+    Initiate a build in one of these ways:
+    
+    - Tap the **Build** menu and select **Build APK**
+    - Tap the **Run** button (▶) in the toolbar
+    - Use the keyboard shortcut **Ctrl+B**
+    
+    <Tip>
+    The first build takes longer (5-10 minutes) as Gradle downloads dependencies. Subsequent builds are much faster thanks to caching.
+    </Tip>
+  </Step>
+
+  <Step title="Monitor Build Progress">
+    The build panel at the bottom shows:
+    
+    - Gradle sync status
+    - Compilation progress
+    - Task execution details
+    - Warnings and errors
+    
+    You can view detailed logs by expanding the build output panel.
+    
+    <Note>
+    If the build fails, carefully read the error messages. Common issues include missing dependencies, syntax errors, or incorrect AGP versions.
+    </Note>
+  </Step>
+
+  <Step title="Build Success">
+    When the build completes successfully:
+    
+    1. You'll see "BUILD SUCCESSFUL" in the build output
+    2. The APK is generated in `app/build/outputs/apk/debug/`
+    3. A notification appears with options to install or share
+    
+    Tap **Install** to install the APK on your device.
+  </Step>
+</Steps>
+
+## Running Your App
+
+<Steps>
+  <Step title="Install the APK">
+    After a successful build:
+    
+    1. Tap the **Install** notification
+    2. Grant installation permission if prompted
+    3. Wait for installation to complete
+  </Step>
+
+  <Step title="Launch Your App">
+    1. Open your app drawer
+    2. Find "My First App" (or your chosen name)
+    3. Tap to launch
+    4. Test the button functionality
+  </Step>
+
+  <Step title="View Logs">
+    To debug your running app:
+    
+    1. Open the **Logcat** panel in Android Code Studio
+    2. Filter logs by your package name
+    3. View real-time logs as your app runs
+    4. Identify errors or unexpected behavior
+    
+    <Tip>
+    Use `Log.d()`, `Log.i()`, and `Log.e()` in your code to add custom log messages for debugging.
+    </Tip>
+  </Step>
+</Steps>
+
+## Using Code Features
+
+Android Code Studio provides powerful code editing features:
+
+### Code Completion
+
+- Type to see intelligent suggestions
+- Auto-complete class names, methods, and variables
+- Resource value auto-completion in XML
+- Import suggestions for unresolved symbols
+
+<Tip>
+Press **Ctrl+Space** to manually trigger code completion at any time.
+</Tip>
+
+### Language Servers
+
+Android Code Studio includes language servers for:
+
+- **Java** - Full Java language support with syntax checking
+- **Kotlin** - Kotlin language features and analysis
+- **XML** - XML validation and resource resolution
+
+These provide real-time error checking, code navigation, and refactoring support.
+
+### Code Navigation
+
+- **Go to Definition** - Long-press a symbol and select "Go to Definition"
+- **Find References** - Find all usages of a class, method, or variable
+- **File Search** - Quickly search for files by name (**Ctrl+P**)
+- **Symbol Search** - Search for classes and methods (**Ctrl+Shift+N**)
+
+### Git Integration
+
+Android Code Studio has built-in Git support:
+
+1. Initialize a repository: **VCS** > **Enable Version Control**
+2. Commit changes: **VCS** > **Commit**
+3. View diff: Compare current changes with last commit
+4. Branch management: Create, switch, and merge branches
+
+<Note>
+Git operations can also be performed via the integrated terminal using standard Git commands.
+</Note>
+
+## AI-Powered Assistance
+
+Android Code Studio includes an **AI Agent** that understands your project:
+
+1. Tap the **AI Assistant** button in the toolbar
+2. Ask questions about your code or request help
+3. The AI analyzes your project structure and provides context-aware suggestions
+4. Use it for debugging, code generation, and learning
+
+Example queries:
+- "How do I add a RecyclerView to my activity?"
+- "Why is my button not responding to clicks?"
+- "Generate a data class for a user profile"
+
+<Tip>
+The AI Agent is project-aware and understands your specific code structure, making it more helpful than generic AI assistants.
+</Tip>
+
+## Next Steps
+
+Now that you've created and built your first Android app, explore these features:
+
+### Additional Tools
+
+- **Asset Studio** - Create icons and drawables
+- **UI Designer** - Visually design complex layouts
+- **Terminal** - Access full command-line tools
+- **SDK Manager** - Manage Android SDK components via terminal
+- **Plugin Creator** - Create sub-modules in your project
+
+### Advanced Templates
+
+Try other project templates:
+
+<CodeGroup>
+
+```kotlin Basic Activity Template
+// Includes a toolbar and floating action button
+public class MainActivity : AppCompatActivity() {
+    
+    private var _binding: ActivityMainBinding? = null
+    
+    private val binding: ActivityMainBinding
+      get() = checkNotNull(_binding) { "Activity has been destroyed" }
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        _binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        
+        setSupportActionBar(binding.toolbar)
+        
+        binding.fab.setOnClickListener {
+            Toast.makeText(this@MainActivity, "Replace with your action", Toast.LENGTH_SHORT).show()
+        }
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        _binding = null
+    }
+}
+```
+
+```java Java Version
+// Java is also fully supported
+package com.example.myfirstapp;
+
+import androidx.appcompat.app.AppCompatActivity;
+import android.os.Bundle;
+import com.example.myfirstapp.databinding.ActivityMainBinding;
+
+public class MainActivity extends AppCompatActivity {
+    private ActivityMainBinding binding;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        // Inflate and get instance of binding
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        
+        // set content view to binding's root
+        setContentView(binding.getRoot());
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        this.binding = null;
+    }
+}
+```
+
+</CodeGroup>
+
+### Learning Resources
+
+- Explore the [official AndroidIDE documentation](https://docs.androidide.com/)
+- Join the [Telegram community](https://t.me/rv2ide) for support
+- Report bugs on [GitHub Issues](https://github.com/Mohammed-baqer-null/android-code-studio/issues)
+- Visit the [website](https://m.androidide.com) for updates
+
+<Warning>
+Remember that Android Code Studio requires Android Gradle Plugin v7.2.0 or newer. If you're importing an existing project with an older AGP version, you'll need to migrate it first.
+</Warning>
+
+## Troubleshooting
+
+### Build Failures
+
+If your build fails:
+
+1. Check the error message in the build output
+2. Ensure you have sufficient storage space
+3. Try **Build** > **Clean Project** then rebuild
+4. Verify your internet connection for dependency downloads
+5. Check that your project uses AGP 7.2.0+
+
+### Slow Performance
+
+To improve performance:
+
+- Close unused files in the editor
+- Disable unused language servers in settings
+- Reduce the number of open projects
+- Clear Gradle cache if builds are slow: `./gradlew clean`
+
+### Installation Issues
+
+If the built APK fails to install:
+
+- Uninstall previous versions of your app
+- Check if storage is full
+- Verify the APK is not corrupted
+- Ensure you have installation permissions
+
+<Tip>
+For more detailed troubleshooting, check the [Installation Guide](/installation#troubleshooting) or ask in the community Telegram group.
+</Tip>

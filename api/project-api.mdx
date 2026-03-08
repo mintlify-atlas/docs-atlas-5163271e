@@ -1,0 +1,463 @@
+---
+title: Project API
+description: APIs for managing projects, workspaces, and module structures
+---
+
+The Project API provides interfaces for managing Gradle projects, workspaces, and Android modules in Android Code Studio.
+
+## Core Interfaces
+
+### IProjectManager
+
+The main interface for project lifecycle management.
+
+**Source**: `core/projects/src/main/java/com/tom/rv2ide/projects/IProjectManager.kt:33`
+
+```kotlin
+package com.tom.rv2ide.projects
+
+import com.android.builder.model.v2.models.ProjectSyncIssues
+import com.tom.rv2ide.tooling.api.IProject
+import java.io.File
+
+interface IProjectManager {
+  
+  // Properties
+  val projectDir: File
+  val projectDirPath: String
+  val projectSyncIssues: ProjectSyncIssues?
+  
+  // Project operations
+  fun openProject(directory: File)
+  fun openProject(path: String)
+  suspend fun setupProject(project: IProject)
+  
+  // Workspace access
+  fun getWorkspace(): IWorkspace?
+  fun requireWorkspace(): IWorkspace
+  
+  // File notifications
+  fun notifyFileCreated(file: File)
+  fun notifyFileDeleted(file: File)
+  fun notifyFileRenamed(from: File, to: File)
+  
+  // Lifecycle
+  fun destroy()
+  
+  companion object {
+    fun getInstance(): IProjectManager
+  }
+}
+```
+
+### IWorkspace
+
+Represents an opened project workspace with all modules and configurations.
+
+**Source**: `core/projects/src/main/java/com/tom/rv2ide/projects/IWorkspace.kt:31`
+
+```kotlin
+package com.tom.rv2ide.projects
+
+import com.android.builder.model.v2.models.ProjectSyncIssues
+import com.tom.rv2ide.projects.android.AndroidModule
+import com.tom.rv2ide.tooling.api.models.BuildVariantInfo
+import java.io.File
+import java.nio.file.Path
+
+interface IWorkspace {
+  
+  // Project structure
+  fun getProjectDir(): File
+  fun getRootProject(): GradleProject
+  fun getSubProjects(): List<GradleProject>
+  fun getProjectSyncIssues(): ProjectSyncIssues
+  
+  // Build variants
+  fun getAndroidVariantSelections(): Map<String, BuildVariantInfo>
+  
+  // Project queries
+  fun findProject(path: String): GradleProject?
+  fun getProject(path: String): GradleProject
+  fun androidProjects(): Sequence<AndroidModule>
+  
+  // File queries
+  fun findModuleForFile(file: Path, checkExistance: Boolean = false): ModuleProject?
+  fun findModuleForFile(file: File, checkExistance: Boolean = false): ModuleProject?
+  fun containsSourceFile(file: Path): Boolean
+  fun isAndroidResource(file: File): Boolean
+  
+  class ProjectNotFoundException(path: String) : RuntimeException
+  class NotConfiguredException : RuntimeException
+}
+```
+
+## Getting Started
+
+### Obtain Project Manager
+
+Get the singleton project manager instance:
+
+```kotlin
+import com.tom.rv2ide.projects.IProjectManager
+
+val projectManager = IProjectManager.getInstance()
+println("Project directory: ${projectManager.projectDir}")
+```
+
+### Open a Project
+
+Open a project directory:
+
+```kotlin
+import java.io.File
+
+val projectDir = File("/storage/emulated/0/AndroidProjects/MyApp")
+projectManager.openProject(projectDir)
+
+// Or use path string
+projectManager.openProject("/storage/emulated/0/AndroidProjects/MyApp")
+```
+
+<ParamField path="directory" type="File" required>
+  The root directory of the Gradle project to open
+</ParamField>
+
+## Workspace Operations
+
+### Access Workspace
+
+Get the current workspace:
+
+```kotlin
+val workspace = projectManager.getWorkspace()
+
+if (workspace != null) {
+  val rootProject = workspace.getRootProject()
+  println("Root project: ${rootProject.name}")
+} else {
+  println("No workspace configured")
+}
+
+// Or require workspace (throws if not configured)
+try {
+  val workspace = projectManager.requireWorkspace()
+  // Use workspace
+} catch (e: IWorkspace.NotConfiguredException) {
+  println("Workspace not ready yet")
+}
+```
+
+### Get Project Structure
+
+Retrieve information about the project structure:
+
+```kotlin
+val workspace = projectManager.requireWorkspace()
+
+// Get root project
+val rootProject = workspace.getRootProject()
+println("Root: ${rootProject.name} at ${rootProject.projectDir}")
+
+// Get all subprojects
+val subprojects = workspace.getSubProjects()
+subprojects.forEach { project ->
+  println("  - ${project.path}: ${project.name}")
+}
+
+// Get only Android modules
+val androidModules = workspace.androidProjects().toList()
+androidModules.forEach { module ->
+  println("Android module: ${module.name}")
+  println("  Package: ${module.namespace}")
+  println("  Min SDK: ${module.minSdk}")
+}
+```
+
+<ResponseField name="getRootProject()" type="GradleProject">
+  Returns the root Gradle project
+</ResponseField>
+
+<ResponseField name="getSubProjects()" type="List<GradleProject>">
+  Returns all subprojects (modules) in the workspace
+</ResponseField>
+
+<ResponseField name="androidProjects()" type="Sequence<AndroidModule>">
+  Returns a sequence of Android application/library modules
+</ResponseField>
+
+### Find Projects
+
+Locate specific projects by path:
+
+```kotlin
+// Find project (returns null if not found)
+val appModule = workspace.findProject(":app")
+if (appModule != null) {
+  println("Found app module")
+}
+
+// Get project (throws if not found)
+try {
+  val libModule = workspace.getProject(":mylibrary")
+  println("Library module: ${libModule.name}")
+} catch (e: IWorkspace.ProjectNotFoundException) {
+  println("Project not found: ${e.message}")
+}
+```
+
+<ParamField path="path" type="String" required>
+  The Gradle project path (e.g., ":app", ":library", ":module:submodule")
+</ParamField>
+
+## File Operations
+
+### Find Module for File
+
+Determine which module contains a specific file:
+
+```kotlin
+import java.nio.file.Paths
+
+val filePath = Paths.get("/storage/emulated/0/MyApp/app/src/main/java/com/example/Main.kt")
+val module = workspace.findModuleForFile(filePath)
+
+if (module != null) {
+  println("File belongs to module: ${module.name}")
+  println("Module path: ${module.path}")
+} else {
+  println("File not part of any module")
+}
+```
+
+<ParamField path="file" type="Path | File" required>
+  The file path to search for
+</ParamField>
+
+<ParamField path="checkExistance" type="Boolean" default="false">
+  Whether to verify the file actually exists on disk
+</ParamField>
+
+### Check File Types
+
+```kotlin
+import java.io.File
+
+val javaFile = File("/path/to/MainActivity.java")
+if (workspace.containsSourceFile(javaFile.toPath())) {
+  println("This is a source file")
+}
+
+val layoutFile = File("/path/to/res/layout/activity_main.xml")
+if (workspace.isAndroidResource(layoutFile)) {
+  println("This is an Android resource file")
+}
+```
+
+## Build Variants
+
+### Get Selected Variants
+
+Retrieve the currently selected build variants for Android modules:
+
+```kotlin
+val variants = workspace.getAndroidVariantSelections()
+
+variants.forEach { (projectPath, variantInfo) ->
+  println("Project: $projectPath")
+  println("  Build type: ${variantInfo.buildType}")
+  println("  Flavors: ${variantInfo.flavors}")
+}
+```
+
+<ResponseField name="getAndroidVariantSelections()" type="Map<String, BuildVariantInfo>">
+  Returns a map of project paths to their selected build variant information
+</ResponseField>
+
+## Sync Issues
+
+### Check Sync Problems
+
+Access issues encountered during project synchronization:
+
+```kotlin
+val syncIssues = projectManager.projectSyncIssues
+
+if (syncIssues != null) {
+  println("Project sync issues found:")
+  syncIssues.syncIssues.forEach { issue ->
+    println("  [${issue.severity}] ${issue.message}")
+    println("     at ${issue.data}")
+  }
+}
+
+// Or from workspace
+val workspaceSyncIssues = workspace.getProjectSyncIssues()
+```
+
+## File Change Notifications
+
+### Notify File Events
+
+Inform the project manager about file system changes:
+
+```kotlin
+import java.io.File
+
+// File created
+val newFile = File("/path/to/NewClass.java")
+projectManager.notifyFileCreated(newFile)
+
+// File deleted
+val deletedFile = File("/path/to/OldClass.java")
+projectManager.notifyFileDeleted(deletedFile)
+
+// File renamed or moved
+val oldPath = File("/path/to/OldName.java")
+val newPath = File("/path/to/NewName.java")
+projectManager.notifyFileRenamed(oldPath, newPath)
+```
+
+<Note>
+  These notifications help the IDE update its internal state, trigger re-indexing, and update language servers.
+</Note>
+
+## Project Models
+
+### GradleProject
+
+Represents a Gradle project or module:
+
+```kotlin
+interface GradleProject {
+  val name: String
+  val path: String  // e.g., ":app"
+  val projectDir: File
+  val buildDir: File
+  val buildFile: File  // build.gradle or build.gradle.kts
+}
+```
+
+### ModuleProject
+
+Extends GradleProject with module-specific functionality:
+
+```kotlin
+abstract class ModuleProject : GradleProject {
+  abstract val classPaths: Set<File>
+  abstract val compileClasspaths: Set<File>
+  abstract val compileSourceDirectories: Set<File>
+  // More properties...
+}
+```
+
+### AndroidModule
+
+Represents an Android application or library module:
+
+```kotlin
+class AndroidModule : ModuleProject {
+  val namespace: String
+  val minSdk: Int
+  val targetSdk: Int
+  val compileSdk: String
+  val resourceDirectories: Set<File>
+  val assetsDirectories: Set<File>
+  // More Android-specific properties...
+}
+```
+
+## Complete Example
+
+Here's a complete example demonstrating project API usage:
+
+```kotlin
+import com.tom.rv2ide.projects.IProjectManager
+import java.io.File
+import java.nio.file.Paths
+
+class ProjectAnalyzer {
+  
+  fun analyzeProject(projectPath: String) {
+    val projectManager = IProjectManager.getInstance()
+    
+    // Open project
+    projectManager.openProject(projectPath)
+    
+    // Wait for initialization (in real code, use proper async handling)
+    val workspace = projectManager.requireWorkspace()
+    
+    // Analyze structure
+    println("=== Project Structure ===")
+    val root = workspace.getRootProject()
+    println("Root: ${root.name}")
+    
+    workspace.getSubProjects().forEach { project ->
+      println("\nModule: ${project.name} (${project.path})")
+      println("  Location: ${project.projectDir}")
+      println("  Build file: ${project.buildFile}")
+    }
+    
+    // Analyze Android modules
+    println("\n=== Android Modules ===")
+    workspace.androidProjects().forEach { android ->
+      println("${android.name}:")
+      println("  Package: ${android.namespace}")
+      println("  Min SDK: ${android.minSdk}")
+      println("  Target SDK: ${android.targetSdk}")
+      println("  Compile SDK: ${android.compileSdk}")
+    }
+    
+    // Check variants
+    println("\n=== Build Variants ===")
+    workspace.getAndroidVariantSelections().forEach { (path, variant) ->
+      println("$path: ${variant.buildType}")
+    }
+    
+    // Find module for a file
+    val testFile = Paths.get("$projectPath/app/src/main/java/MainActivity.kt")
+    val module = workspace.findModuleForFile(testFile)
+    if (module != null) {
+      println("\nMainActivity.kt belongs to: ${module.name}")
+    }
+    
+    // Check sync issues
+    val issues = projectManager.projectSyncIssues
+    if (issues != null && issues.syncIssues.isNotEmpty()) {
+      println("\n=== Sync Issues ===")
+      issues.syncIssues.forEach { issue ->
+        println("[${issue.severity}] ${issue.message}")
+      }
+    } else {
+      println("\nNo sync issues found")
+    }
+  }
+}
+```
+
+## Lifecycle Management
+
+### Cleanup
+
+Properly destroy the project manager when done:
+
+```kotlin
+// Clean up resources
+projectManager.destroy()
+```
+
+<Warning>
+  Always call `destroy()` when shutting down to release resources and close connections.
+</Warning>
+
+## Related APIs
+
+<CardGroup cols={2}>
+  <Card title="Tooling API" icon="hammer" href="./tooling-api">
+    Execute Gradle tasks and builds
+  </Card>
+  
+  <Card title="LSP API" icon="brackets-curly" href="./lsp-api">
+    Connect language servers to projects
+  </Card>
+</CardGroup>

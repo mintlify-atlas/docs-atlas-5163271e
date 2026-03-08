@@ -1,0 +1,529 @@
+---
+title: SDK & NDK
+description: Manage Android SDK and NDK installations in Android Code Studio
+icon: android
+---
+
+Android Code Studio includes built-in support for managing Android SDK and NDK through the terminal. Learn how to install, configure, and use these essential Android development tools.
+
+## Overview
+
+The Android SDK and NDK are essential for Android app development:
+- **Android SDK** - Platform tools, build tools, and Android platform libraries
+- **Android NDK** - Native development kit for C/C++ code
+
+<Note>
+  Android Code Studio uses the command-line SDK manager (`sdkmanager`) accessible through the built-in terminal.
+</Note>
+
+## SDK Installation Location
+
+The Android SDK is installed at:
+
+```bash
+$HOME/android-sdk
+```
+
+Full path example:
+```
+/data/data/com.tom.rv2ide/files/home/android-sdk/
+```
+
+### SDK Directory Structure
+
+```
+android-sdk/
+├── build-tools/          # Build tools (aapt, aapt2, dx, d8)
+├── cmdline-tools/        # SDK command-line tools
+├── platforms/            # Android platform JARs
+│   ├── android-33/
+│   ├── android-34/
+│   └── android-35/
+├── platform-tools/       # adb, fastboot
+├── sources/             # Android source code
+├── emulator/            # (Not supported on Android)
+└── ndk/                 # NDK installations (special requirements)
+```
+
+## Environment Variables
+
+The IDE automatically sets the following Android SDK environment variables:
+
+<CodeGroup>
+```bash SDK Environment
+# Android SDK root directory
+export ANDROID_HOME="$HOME/android-sdk"
+export ANDROID_SDK_ROOT="$HOME/android-sdk"
+
+# Android user configuration
+export ANDROID_USER_HOME="$HOME/.android"
+
+# Path additions
+export PATH="$ANDROID_HOME/platform-tools:$PATH"
+export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+```
+
+```bash Build Environment
+# Used by Android Gradle Plugin
+export ANDROID_HOME="$HOME/android-sdk"
+export ANDROID_SDK_ROOT="$HOME/android-sdk"
+
+# Gradle user home
+export GRADLE_USER_HOME="$HOME/.gradle"
+```
+</CodeGroup>
+
+## Installing SDK Components
+
+<Warning>
+  Android Code Studio does **not** include SDK components by default. You must install them manually using the SDK manager.
+</Warning>
+
+### Initial SDK Setup
+
+<Steps>
+  <Step title="Install SDK Command-Line Tools">
+    First, install the command-line tools package:
+    
+    ```bash
+    # Create SDK directory
+    mkdir -p $HOME/android-sdk
+    cd $HOME/android-sdk
+    
+    # Download command-line tools
+    # Visit: https://developer.android.com/studio#command-line-tools-only
+    # Download the Linux version and extract to android-sdk/cmdline-tools/
+    ```
+    
+    <Note>
+      Download the command-line tools on a computer and transfer to your device, or use a browser on your Android device.
+    </Note>
+  </Step>
+  
+  <Step title="Install Platform Tools">
+    Install essential platform tools (adb, fastboot):
+    
+    ```bash
+    sdkmanager "platform-tools"
+    ```
+  </Step>
+  
+  <Step title="Install Build Tools">
+    Install the latest build tools:
+    
+    ```bash
+    sdkmanager "build-tools;34.0.0"
+    ```
+    
+    Replace `34.0.0` with your desired version.
+  </Step>
+  
+  <Step title="Install Android Platform">
+    Install Android platform SDK for your target API level:
+    
+    ```bash
+    # Android 14 (API 34)
+    sdkmanager "platforms;android-34"
+    
+    # Android 13 (API 33)
+    sdkmanager "platforms;android-33"
+    ```
+  </Step>
+</Steps>
+
+### Using SDK Manager
+
+The `sdkmanager` tool is your primary interface for managing SDK components.
+
+#### List Available Packages
+
+```bash
+# List all available packages
+sdkmanager --list
+
+# List installed packages only
+sdkmanager --list_installed
+```
+
+#### Install Packages
+
+```bash
+# Install specific packages
+sdkmanager "package-name"
+
+# Install multiple packages
+sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+
+# Accept all licenses
+yes | sdkmanager --licenses
+```
+
+#### Update Packages
+
+```bash
+# Update all installed packages
+sdkmanager --update
+
+# Update specific packages
+sdkmanager "platform-tools" "build-tools;34.0.0"
+```
+
+#### Uninstall Packages
+
+```bash
+# Uninstall a package
+sdkmanager --uninstall "package-name"
+
+# Example: Uninstall old build tools
+sdkmanager --uninstall "build-tools;33.0.0"
+```
+
+## Common SDK Packages
+
+### Essential Packages
+
+These packages are required for most Android development:
+
+| Package | Description | Command |
+|---------|-------------|----------|
+| Platform Tools | adb, fastboot | `sdkmanager "platform-tools"` |
+| Build Tools | aapt, aapt2, d8, zipalign | `sdkmanager "build-tools;34.0.0"` |
+| Android Platform | android.jar for compilation | `sdkmanager "platforms;android-34"` |
+
+### Optional Packages
+
+| Package | Description | Command |
+|---------|-------------|----------|
+| Sources | Android source code | `sdkmanager "sources;android-34"` |
+| Docs | Android API documentation | `sdkmanager "docs"` |
+| Extras | Google Play Services, etc. | Various |
+
+### Example Installation Commands
+
+```bash
+# Complete SDK setup for API 34
+sdkmanager "platform-tools" \
+  "build-tools;34.0.0" \
+  "platforms;android-34" \
+  "sources;android-34"
+
+# Setup for multiple API levels
+sdkmanager "platforms;android-33" \
+  "platforms;android-34" \
+  "platforms;android-35" \
+  "build-tools;34.0.0"
+```
+
+## NDK Installation
+
+<Warning>
+  **Important NDK Limitation**: The Android NDK contains native binaries compiled for x86/x86_64 architectures. These binaries **cannot** run on Android devices (ARM/ARM64 architecture).
+</Warning>
+
+### Why NDK Doesn't Work
+
+The NDK includes tools like:
+- `clang` - C/C++ compiler
+- `lld` - Linker
+- `llvm-ar` - Archive utility
+
+These are native Linux x86_64 binaries that cannot execute on Android's ARM architecture.
+
+### Alternative Approaches
+
+<Tabs>
+  <Tab title="Use Prebuilt Libraries">
+    If your app needs native code, use prebuilt `.so` libraries:
+    
+    1. **Build on a Computer** with Android NDK installed
+    2. **Copy `.so` files** to your Android Code Studio project
+    3. **Include in project**:
+       ```
+       app/src/main/jniLibs/
+       ├── arm64-v8a/
+       │   └── libnative.so
+       ├── armeabi-v7a/
+       │   └── libnative.so
+       ```
+    
+    The Android build system will package these libraries automatically.
+  </Tab>
+  
+  <Tab title="Cloud Build">
+    Use cloud-based build services:
+    
+    - **GitHub Actions** - Build with NDK in CI/CD
+    - **GitLab CI** - Remote build pipeline
+    - **Cloud Build Services** - Third-party services
+    
+    Example GitHub Actions workflow:
+    ```yaml
+    name: Build with NDK
+    on: [push]
+    jobs:
+      build:
+        runs-on: ubuntu-latest
+        steps:
+          - uses: actions/checkout@v3
+          - name: Setup NDK
+            uses: nttld/setup-ndk@v1
+            with:
+              ndk-version: r25c
+          - name: Build
+            run: ./gradlew assembleRelease
+    ```
+  </Tab>
+  
+  <Tab title="Remote Development">
+    Connect to a remote development server:
+    
+    - Set up a Linux server/VM with Android SDK/NDK
+    - Use SSH to connect from Android Code Studio terminal
+    - Build remotely and transfer APK back
+    
+    ```bash
+    # On Android device
+    ssh user@build-server
+    cd project
+    ./gradlew assembleRelease
+    exit
+    
+    # Copy APK back
+    scp user@build-server:project/app/build/outputs/apk/release/app-release.apk .
+    ```
+  </Tab>
+</Tabs>
+
+## Verifying Installation
+
+### Check SDK Installation
+
+```bash
+# Verify environment variables
+echo $ANDROID_HOME
+echo $ANDROID_SDK_ROOT
+
+# Check SDK directory
+ls -la $ANDROID_HOME
+
+# List installed packages
+sdkmanager --list_installed
+```
+
+### Check Platform Tools
+
+```bash
+# Verify adb
+adb version
+
+# List connected devices
+adb devices
+
+# Check build tools
+ls -la $ANDROID_HOME/build-tools/
+```
+
+### Check Platform JARs
+
+```bash
+# List installed platforms
+ls -la $ANDROID_HOME/platforms/
+
+# Verify android.jar exists
+ls -la $ANDROID_HOME/platforms/android-34/android.jar
+```
+
+## SDK Configuration in Projects
+
+### compileSdkVersion
+
+Set in `app/build.gradle`:
+
+```gradle
+android {
+    compileSdkVersion 34
+    
+    defaultConfig {
+        targetSdkVersion 34
+        minSdkVersion 21
+    }
+}
+```
+
+Ensure the corresponding platform is installed:
+```bash
+sdkmanager "platforms;android-34"
+```
+
+### Build Tools Version
+
+Specify build tools version:
+
+```gradle
+android {
+    buildToolsVersion "34.0.0"
+}
+```
+
+Or let AGP auto-select the latest:
+```gradle
+android {
+    // buildToolsVersion not specified - uses latest
+}
+```
+
+### local.properties
+
+The IDE automatically generates `local.properties` with SDK location:
+
+```properties
+sdk.dir=/data/data/com.tom.rv2ide/files/home/android-sdk
+```
+
+<Note>
+  This file is auto-generated. Do not manually edit it.
+</Note>
+
+## Troubleshooting
+
+### SDK Not Found
+
+If Gradle can't find the Android SDK:
+
+<Steps>
+  <Step title="Verify Environment Variables">
+    ```bash
+    echo $ANDROID_HOME
+    echo $ANDROID_SDK_ROOT
+    ```
+    
+    Both should point to: `/data/data/com.tom.rv2ide/files/home/android-sdk`
+  </Step>
+  
+  <Step title="Check local.properties">
+    ```bash
+    cat local.properties
+    ```
+    
+    Should contain: `sdk.dir=/data/data/com.tom.rv2ide/files/home/android-sdk`
+  </Step>
+  
+  <Step title="Verify SDK Installation">
+    ```bash
+    ls -la $ANDROID_HOME
+    sdkmanager --list_installed
+    ```
+  </Step>
+  
+  <Step title="Restart IDE">
+    Close and reopen Android Code Studio to refresh environment variables
+  </Step>
+</Steps>
+
+### Platform/Build Tools Not Found
+
+If build fails with missing platform or build tools:
+
+```bash
+# Check what's installed
+sdkmanager --list_installed
+
+# Install missing components
+sdkmanager "platforms;android-34"
+sdkmanager "build-tools;34.0.0"
+
+# Clean and rebuild
+./gradlew clean build
+```
+
+### License Errors
+
+If build fails due to license acceptance:
+
+```bash
+# Accept all SDK licenses
+yes | sdkmanager --licenses
+
+# Or manually accept
+sdkmanager --licenses
+```
+
+### Permission Errors
+
+If you get permission errors:
+
+```bash
+# Fix SDK directory permissions
+chmod -R 755 $ANDROID_HOME
+
+# Fix specific tools
+chmod +x $ANDROID_HOME/platform-tools/*
+chmod +x $ANDROID_HOME/build-tools/*/aapt*
+```
+
+## SDK Maintenance
+
+### Regular Updates
+
+Keep your SDK components updated:
+
+```bash
+# Update all components
+sdkmanager --update
+
+# Check for updates without installing
+sdkmanager --list | grep -i "update available"
+```
+
+### Clean Up Old Versions
+
+Remove old SDK components to save space:
+
+```bash
+# List installed versions
+sdkmanager --list_installed
+
+# Uninstall old build tools
+sdkmanager --uninstall "build-tools;33.0.0"
+
+# Uninstall old platforms
+sdkmanager --uninstall "platforms;android-32"
+```
+
+### Check Disk Usage
+
+```bash
+# Check SDK size
+du -sh $ANDROID_HOME
+
+# Check individual components
+du -sh $ANDROID_HOME/*/
+```
+
+## Best Practices
+
+<Tip>
+  **Keep Essential Versions Only** - Only install SDK platforms you actively develop for to save storage space.
+</Tip>
+
+<Tip>
+  **Use Latest Build Tools** - Always use the latest stable build tools version for best compatibility and bug fixes.
+</Tip>
+
+<Tip>
+  **Accept Licenses Early** - Run `sdkmanager --licenses` after initial setup to avoid build errors.
+</Tip>
+
+<Tip>
+  **Regular Updates** - Run `sdkmanager --update` periodically to get latest patches and improvements.
+</Tip>
+
+<Warning>
+  **Storage Management** - Android devices have limited storage. Monitor SDK size and remove unused components regularly.
+</Warning>
+
+## Related Topics
+
+- [JDK Setup](/configuration/jdk-setup)
+- [Build Configuration](/configuration/build-gradle)
+- [Terminal Usage](/features/terminal)

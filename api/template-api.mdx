@@ -1,0 +1,598 @@
+---
+title: Template API
+description: APIs for creating and executing project and file templates
+---
+
+The Template API provides interfaces for creating custom project templates and file templates in Android Code Studio.
+
+## Core Interfaces
+
+### ITemplateProvider
+
+The main interface for managing templates.
+
+**Source**: `utilities/templates-api/src/main/java/com/tom/rv2ide/templates/ITemplateProvider.kt:27`
+
+```kotlin
+package com.tom.rv2ide.templates
+
+interface ITemplateProvider {
+  
+  // Template access
+  fun getTemplates(): List<Template<*>>
+  fun getTemplate(templateId: String): Template<*>?
+  
+  // Lifecycle
+  fun reload()
+  fun release()
+  
+  companion object {
+    fun getInstance(reload: Boolean = false): ITemplateProvider
+    fun isLoaded(): Boolean
+  }
+}
+```
+
+### RecipeExecutor
+
+Interface for executing template recipes and file operations.
+
+**Source**: `utilities/templates-api/src/main/java/com/tom/rv2ide/templates/RecipeExecutor.kt:28`
+
+```kotlin
+package com.tom.rv2ide.templates
+
+import java.io.File
+import java.io.InputStream
+
+interface RecipeExecutor {
+  
+  // Project data access
+  fun projectData(): ProjectTemplateData?
+  fun requireProjectData(): ProjectTemplateData
+  
+  // File operations
+  fun copy(source: File, dest: File)
+  fun save(source: String, dest: File)
+  
+  // Asset operations
+  fun openAsset(path: String): InputStream
+  fun copyAsset(path: String, dest: File)
+  fun copyAssetsRecursively(path: String, destDir: File)
+}
+```
+
+## Getting Templates
+
+### Get Template Provider
+
+Access the template provider:
+
+```kotlin
+import com.tom.rv2ide.templates.ITemplateProvider
+
+val templateProvider = ITemplateProvider.getInstance()
+println("Template provider loaded")
+```
+
+### List Available Templates
+
+Retrieve all available templates:
+
+```kotlin
+val templates = templateProvider.getTemplates()
+
+println("Available templates:")
+templates.forEach { template ->
+  println("  - ${template.name} (${template.id})")
+  println("    ${template.description}")
+}
+```
+
+<ResponseField name="getTemplates()" type="List<Template<*>>">
+  Returns all registered templates in the provider
+</ResponseField>
+
+### Get Specific Template
+
+Retrieve a template by ID:
+
+```kotlin
+val templateId = "EmptyActivity"
+val template = templateProvider.getTemplate(templateId)
+
+if (template != null) {
+  println("Found template: ${template.name}")
+  println("Category: ${template.category}")
+} else {
+  println("Template not found: $templateId")
+}
+```
+
+<ParamField path="templateId" type="String" required>
+  The unique identifier for the template
+</ParamField>
+
+## Template Types
+
+### Project Templates
+
+Templates for creating entire projects:
+
+```kotlin
+interface ProjectTemplate : Template<ProjectTemplateData> {
+  val minSdk: Int
+  val targetSdk: Int
+  val widgets: List<Widget>
+  
+  suspend fun create(data: ProjectTemplateData, executor: RecipeExecutor)
+}
+```
+
+### Module Templates
+
+Templates for adding modules to existing projects:
+
+```kotlin
+interface ModuleTemplate : Template<ModuleTemplateData> {
+  val isLibrary: Boolean
+  val androidModule: Boolean
+  
+  suspend fun create(data: ModuleTemplateData, executor: RecipeExecutor)
+}
+```
+
+### File Templates
+
+Templates for creating individual files:
+
+```kotlin
+interface FileTemplate : Template<FileTemplateData> {
+  val fileExtension: String
+  
+  suspend fun create(data: FileTemplateData, executor: RecipeExecutor)
+}
+```
+
+## Creating Templates
+
+### Define a Project Template
+
+Create a custom project template:
+
+```kotlin
+import com.tom.rv2ide.templates.*
+import com.tom.rv2ide.templates.base.ProjectTemplateBuilder
+
+class MyProjectTemplate : ProjectTemplate {
+  
+  override val id = "MyProject"
+  override val name = "My Custom Project"
+  override val description = "A custom project template"
+  override val category = "Custom"
+  override val minSdk = 21
+  override val targetSdk = 34
+  override val widgets = emptyList<Widget>()
+  
+  override suspend fun create(
+    data: ProjectTemplateData,
+    executor: RecipeExecutor
+  ) {
+    // Create project structure
+    createProjectStructure(data, executor)
+    
+    // Copy template files
+    copyTemplateFiles(executor)
+    
+    // Generate build files
+    generateBuildFiles(data, executor)
+  }
+  
+  private fun createProjectStructure(
+    data: ProjectTemplateData,
+    executor: RecipeExecutor
+  ) {
+    val projectDir = File(data.projectDir)
+    
+    // Create directories
+    File(projectDir, "app/src/main/java").mkdirs()
+    File(projectDir, "app/src/main/res").mkdirs()
+    File(projectDir, "app/src/main/assets").mkdirs()
+  }
+  
+  private fun copyTemplateFiles(executor: RecipeExecutor) {
+    // Copy assets from template
+    executor.copyAssetsRecursively(
+      "templates/MyProject",
+      File(executor.requireProjectData().projectDir)
+    )
+  }
+  
+  private fun generateBuildFiles(
+    data: ProjectTemplateData,
+    executor: RecipeExecutor
+  ) {
+    // Generate build.gradle
+    val buildGradle = """
+      plugins {
+          id 'com.android.application'
+          id 'org.jetbrains.kotlin.android'
+      }
+      
+      android {
+          namespace '${data.packageName}'
+          compileSdk ${data.compileSdk}
+          
+          defaultConfig {
+              applicationId "${data.packageName}"
+              minSdk ${data.minSdk}
+              targetSdk ${data.targetSdk}
+              versionCode 1
+              versionName "1.0"
+          }
+      }
+    """.trimIndent()
+    
+    executor.save(
+      buildGradle,
+      File(data.projectDir, "app/build.gradle")
+    )
+  }
+}
+```
+
+### Define a File Template
+
+Create a template for generating files:
+
+```kotlin
+class KotlinClassTemplate : FileTemplate {
+  
+  override val id = "KotlinClass"
+  override val name = "Kotlin Class"
+  override val description = "Creates a new Kotlin class"
+  override val category = "Kotlin"
+  override val fileExtension = ".kt"
+  
+  override suspend fun create(
+    data: FileTemplateData,
+    executor: RecipeExecutor
+  ) {
+    val className = data.fileName
+    val packageName = data.packageName
+    
+    val content = """
+      package $packageName
+      
+      /**
+       * $className
+       * 
+       * @author ${data.author}
+       */
+      class $className {
+          
+          // TODO: Implement class
+          
+      }
+    """.trimIndent()
+    
+    val targetFile = File(data.targetDirectory, "$className.kt")
+    executor.save(content, targetFile)
+    
+    println("Created: ${targetFile.absolutePath}")
+  }
+}
+```
+
+## Recipe Execution
+
+### File Operations
+
+Perform file operations during template execution:
+
+```kotlin
+class TemplateRecipe(private val executor: RecipeExecutor) {
+  
+  fun execute(data: ProjectTemplateData) {
+    val projectDir = File(data.projectDir)
+    
+    // Copy single file
+    val sourceFile = File("/templates/MainActivity.kt")
+    val destFile = File(projectDir, "app/src/main/java/MainActivity.kt")
+    executor.copy(sourceFile, destFile)
+    
+    // Save string content to file
+    val manifest = """
+      <?xml version="1.0" encoding="utf-8"?>
+      <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+          <application
+              android:label="${data.appName}">
+          </application>
+      </manifest>
+    """.trimIndent()
+    
+    executor.save(manifest, File(projectDir, "app/src/main/AndroidManifest.xml"))
+  }
+}
+```
+
+### Asset Operations
+
+Work with template assets:
+
+```kotlin
+fun copyTemplateAssets(executor: RecipeExecutor) {
+  // Open asset stream
+  val stream = executor.openAsset("templates/icon.png")
+  stream.use { input ->
+    // Process asset
+  }
+  
+  // Copy single asset
+  executor.copyAsset(
+    "templates/icon.png",
+    File("app/src/main/res/drawable/icon.png")
+  )
+  
+  // Copy entire asset directory
+  executor.copyAssetsRecursively(
+    "templates/layouts",
+    File("app/src/main/res/layout")
+  )
+}
+```
+
+<ParamField path="path" type="String" required>
+  The path to the asset relative to the assets directory
+</ParamField>
+
+<ParamField path="dest" type="File" required>
+  The destination file or directory
+</ParamField>
+
+## Template Data
+
+### ProjectTemplateData
+
+Data passed when creating projects:
+
+```kotlin
+data class ProjectTemplateData(
+  val projectName: String,
+  val projectDir: String,
+  val packageName: String,
+  val appName: String,
+  val language: Language,
+  val minSdk: Int,
+  val targetSdk: Int,
+  val compileSdk: Int,
+  val useAndroidX: Boolean = true,
+  val useKotlin: Boolean = true
+)
+```
+
+### ModuleTemplateData
+
+Data for creating modules:
+
+```kotlin
+data class ModuleTemplateData(
+  val moduleName: String,
+  val packageName: String,
+  val parentProjectDir: String,
+  val isLibrary: Boolean = false,
+  val language: Language
+)
+```
+
+### FileTemplateData
+
+Data for creating files:
+
+```kotlin
+data class FileTemplateData(
+  val fileName: String,
+  val packageName: String,
+  val targetDirectory: File,
+  val author: String = "Unknown",
+  val extraData: Map<String, Any> = emptyMap()
+)
+```
+
+## Using Template Builders
+
+### AndroidModuleTemplateBuilder
+
+Use the builder for Android modules:
+
+```kotlin
+import com.tom.rv2ide.templates.base.AndroidModuleTemplateBuilder
+
+val builder = AndroidModuleTemplateBuilder()
+  .setModuleName("mymodule")
+  .setPackageName("com.example.mymodule")
+  .setMinSdk(21)
+  .setTargetSdk(34)
+  .setIsLibrary(false)
+  
+builder.build().execute(executor)
+```
+
+### FileTemplateBuilder
+
+Build file templates:
+
+```kotlin
+import com.tom.rv2ide.templates.base.FileTemplateBuilder
+
+val fileBuilder = FileTemplateBuilder()
+  .setFileName("MyClass")
+  .setPackageName("com.example")
+  .setFileExtension(".kt")
+  .setTemplate { data ->
+    """
+      package ${data.packageName}
+      
+      class ${data.fileName} {
+          // Implementation
+      }
+    """.trimIndent()
+  }
+  
+fileBuilder.create(executor)
+```
+
+## Template Registration
+
+### Register Custom Template
+
+Add your template to the provider:
+
+```kotlin
+import com.tom.rv2ide.templates.ITemplateProvider
+
+class MyTemplateProvider : ITemplateProvider {
+  
+  private val templates = mutableListOf<Template<*>>()
+  
+  init {
+    // Register templates
+    templates.add(MyProjectTemplate())
+    templates.add(KotlinClassTemplate())
+    // Add more templates...
+  }
+  
+  override fun getTemplates() = templates.toList()
+  
+  override fun getTemplate(templateId: String) =
+    templates.find { it.id == templateId }
+  
+  override fun reload() {
+    templates.clear()
+    // Reload templates
+  }
+  
+  override fun release() {
+    templates.clear()
+  }
+}
+```
+
+## Complete Example
+
+Here's a complete example creating and using a template:
+
+```kotlin
+import com.tom.rv2ide.templates.*
+import java.io.File
+
+class ComposeActivityTemplate : FileTemplate {
+  
+  override val id = "ComposeActivity"
+  override val name = "Jetpack Compose Activity"
+  override val description = "Creates a new Compose Activity"
+  override val category = "Compose"
+  override val fileExtension = ".kt"
+  
+  override suspend fun create(
+    data: FileTemplateData,
+    executor: RecipeExecutor
+  ) {
+    val activityName = data.fileName
+    val packageName = data.packageName
+    
+    // Generate activity file
+    val activityContent = """
+      package $packageName
+      
+      import android.os.Bundle
+      import androidx.activity.ComponentActivity
+      import androidx.activity.compose.setContent
+      import androidx.compose.material3.*
+      import androidx.compose.runtime.*
+      
+      class $activityName : ComponentActivity() {
+          override fun onCreate(savedInstanceState: Bundle?) {
+              super.onCreate(savedInstanceState)
+              setContent {
+                  ${activityName}Content()
+              }
+          }
+      }
+      
+      @Composable
+      fun ${activityName}Content() {
+          Surface {
+              Text("Hello from $activityName!")
+          }
+      }
+    """.trimIndent()
+    
+    val targetFile = File(data.targetDirectory, "$activityName.kt")
+    executor.save(activityContent, targetFile)
+    
+    println("Created Compose Activity: ${targetFile.absolutePath}")
+  }
+}
+
+// Usage
+fun useTemplate() {
+  val provider = ITemplateProvider.getInstance()
+  val template = ComposeActivityTemplate()
+  
+  // Create template data
+  val data = FileTemplateData(
+    fileName = "MainActivity",
+    packageName = "com.example.myapp",
+    targetDirectory = File("/path/to/src"),
+    author = "Developer"
+  )
+  
+  // Execute template (needs RecipeExecutor implementation)
+  // template.create(data, executor)
+}
+```
+
+## Template Widgets
+
+Define UI widgets for template configuration:
+
+```kotlin
+import com.tom.rv2ide.templates.Widget
+
+val widgets = listOf(
+  Widget.TextField(
+    id = "appName",
+    label = "Application Name",
+    default = "My Application"
+  ),
+  Widget.TextField(
+    id = "packageName",
+    label = "Package Name",
+    default = "com.example.myapp"
+  ),
+  Widget.Spinner(
+    id = "language",
+    label = "Language",
+    options = listOf("Kotlin", "Java"),
+    default = "Kotlin"
+  ),
+  Widget.CheckBox(
+    id = "useCompose",
+    label = "Use Jetpack Compose",
+    default = true
+  )
+)
+```
+
+## Related APIs
+
+<CardGroup cols={2}>
+  <Card title="Project API" icon="folder-tree" href="./project-api">
+    Work with project structure
+  </Card>
+  
+  <Card title="Tooling API" icon="hammer" href="./tooling-api">
+    Initialize created projects
+  </Card>
+</CardGroup>

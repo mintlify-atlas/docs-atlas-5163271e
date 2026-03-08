@@ -1,0 +1,196 @@
+---
+title: Contributing
+description: Learn how to contribute to Android Code Studio
+icon: code-pull-request
+---
+
+Thank you for your interest in contributing to Android Code Studio! This guide will help you get started with contributing to the project.
+
+## Ways to Contribute
+
+There are many ways to contribute to Android Code Studio:
+
+- Report bugs and request features
+- Submit pull requests to fix bugs or add new features
+- Improve documentation
+- Help with translations on [Crowdin](https://crowdin.com/project/androidide)
+- Help other users in the community
+
+## Getting Started
+
+<Steps>
+  <Step title="Fork the Repository">
+    Fork the [Android Code Studio repository](https://github.com/Mohammed-baqer-null/android-code-studio) to your GitHub account.
+  </Step>
+  
+  <Step title="Clone Your Fork">
+    Clone your forked repository to your local machine:
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/android-code-studio.git
+    cd android-code-studio
+    ```
+  </Step>
+  
+  <Step title="Set Up Development Environment">
+    <Note>
+      Android Code Studio is a Gradle-based Android project that can be built using Android Studio or Android Code Studio itself.
+    </Note>
+    
+    - Install Android Studio or use Android Code Studio on your Android device
+    - Open the project in your IDE
+    - Sync Gradle and ensure all dependencies are downloaded
+    - Build the project to verify everything is set up correctly
+  </Step>
+  
+  <Step title="Create a Branch">
+    Create a new branch for your changes:
+    ```bash
+    git checkout -b feature/your-feature-name
+    ```
+    
+    Use descriptive branch names:
+    - `feature/` for new features
+    - `fix/` for bug fixes
+    - `docs/` for documentation changes
+  </Step>
+  
+  <Step title="Make Your Changes">
+    - Write clean, maintainable code
+    - Follow the existing code style and conventions
+    - Test your changes thoroughly
+    - Ensure the project builds successfully
+  </Step>
+  
+  <Step title="Commit Your Changes">
+    Write clear, descriptive commit messages:
+    ```bash
+    git add .
+    git commit -m "Add: Description of your changes"
+    ```
+    
+    Good commit message examples:
+    - `Fix: Crash when opening XML files`
+    - `Add: Support for Kotlin 2.0`
+    - `Improve: Code completion performance`
+  </Step>
+  
+  <Step title="Push and Create Pull Request">
+    Push your changes to your fork:
+    ```bash
+    git push origin feature/your-feature-name
+    ```
+    
+    Then create a pull request from your fork to the main repository.
+  </Step>
+</Steps>
+
+## Pull Request Guidelines
+
+<CardGroup cols={2}>
+  <Card title="Clear Description" icon="file-lines">
+    Provide a clear description of what your PR does and why. Reference any related issues.
+  </Card>
+  
+  <Card title="Single Purpose" icon="bullseye">
+    Keep PRs focused on a single feature or bug fix. Don't combine multiple unrelated changes.
+  </Card>
+  
+  <Card title="Test Your Code" icon="flask">
+    Ensure your changes don't break existing functionality and test edge cases.
+  </Card>
+  
+  <Card title="Follow Standards" icon="check">
+    Follow the project's coding standards and conventions.
+  </Card>
+</CardGroup>
+
+## Coding Standards
+
+### General Guidelines
+
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Keep functions small and focused
+- Follow Android development best practices
+- Ensure code is compatible with Android Gradle Plugin v7.2.0 or newer
+
+### Code Style
+
+- Follow standard Kotlin/Java coding conventions
+- Use consistent indentation (project uses spaces)
+- Organize imports properly
+- Remove unused code and imports
+
+<Warning>
+  Make sure your code builds successfully before submitting a PR. The project must compile without errors.
+</Warning>
+
+## Reporting Bugs
+
+Found a bug? Help us fix it!
+
+<Steps>
+  <Step title="Check Existing Issues">
+    Search [existing issues](https://github.com/Mohammed-baqer-null/android-code-studio/issues) to see if the bug has already been reported.
+  </Step>
+  
+  <Step title="Create a Bug Report">
+    If the issue doesn't exist, [create a new bug report](https://github.com/Mohammed-baqer-null/android-code-studio/issues/new?labels=bug&template=BUG.yml&title=%5BBug%5D%3A+).
+  </Step>
+  
+  <Step title="Provide Details">
+    Include:
+    - Clear description of the bug
+    - Steps to reproduce
+    - Expected vs actual behavior
+    - Android Code Studio version
+    - Device information (Android version, device model)
+    - Screenshots or logs if applicable
+  </Step>
+</Steps>
+
+## Requesting Features
+
+Have an idea for a new feature?
+
+1. Check if a similar feature request already exists
+2. [Create a feature request](https://github.com/Mohammed-baqer-null/android-code-studio/issues/new?labels=feature&template=FEATURE.yml&title=%5BFeature%5D%3A+)
+3. Describe the feature and explain why it would be useful
+4. Provide examples of how it would work
+
+## Translation Contributions
+
+Help make Android Code Studio available in your language!
+
+Visit the [Crowdin project page](https://crowdin.com/project/androidide) to contribute translations.
+
+<Note>
+  Translations are managed through Crowdin. Please don't submit direct PRs for translation files.
+</Note>
+
+## Community Guidelines
+
+- Be respectful and constructive
+- Help others in the community
+- Follow the [code of conduct](https://docs.androidide.com/)
+- Stay on topic in discussions
+
+## License
+
+By contributing to Android Code Studio, you agree that your contributions will be licensed under the GNU General Public License v3.0 (GPLv3).
+
+<Note>
+  Android Code Studio is free software licensed under GPLv3. All contributions must be compatible with this license.
+</Note>
+
+## Questions?
+
+If you have questions about contributing:
+
+- Join the [Telegram community](https://t.me/rv2ide)
+- Ask in GitHub discussions
+- Review existing issues and pull requests
+
+---
+
+Thank you for contributing to Android Code Studio! Your contributions help make mobile development more accessible to everyone.

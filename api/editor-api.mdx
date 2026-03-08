@@ -1,0 +1,411 @@
+---
+title: Editor API
+description: APIs for manipulating editor instances and text content
+---
+
+The Editor API provides interfaces for accessing and manipulating text editors in Android Code Studio.
+
+## Core Interfaces
+
+### IEditor
+
+The main interface for accessing editor instances and manipulating their content.
+
+**Source**: `editor/api/src/main/java/com/tom/rv2ide/editor/api/IEditor.java:34`
+
+```java
+package com.tom.rv2ide.editor.api;
+
+import com.tom.rv2ide.models.Position;
+import com.tom.rv2ide.models.Range;
+import java.io.File;
+
+public interface IEditor {
+  String KEY_FILE = "ide.editor.file";
+  
+  // File operations
+  File getFile();
+  boolean isModified();
+  
+  // Selection operations
+  void setSelection(Position position);
+  void setSelection(Range range);
+  void setSelection(Position start, Position end);
+  void setSelectionAround(int line, int column);
+  
+  // Cursor position
+  Range getCursorLSPRange();
+  Position getCursorLSPPosition();
+  
+  // Validation
+  void validateRange(Range range);
+  boolean isValidRange(Range range);
+  boolean isValidRange(Range range, boolean allowColumnEqual);
+  boolean isValidPosition(Position position);
+  boolean isValidPosition(Position position, boolean allowColumnEqual);
+  boolean isValidLine(int line);
+  boolean isValidColumn(int line, int column);
+  boolean isValidColumn(int line, int column, boolean allowColumnEqual);
+  
+  // Content manipulation
+  int append(CharSequence text);
+  void replaceContent(CharSequence newContent);
+  void goToEnd();
+}
+```
+
+## File Operations
+
+### Get Current File
+
+Retrieve the file being edited:
+
+```java
+File file = editor.getFile();
+if (file != null) {
+  String path = file.getAbsolutePath();
+  System.out.println("Editing: " + path);
+}
+```
+
+<ParamField path="getFile()" type="File">
+  Returns the file being edited, or `null` if no file is associated
+</ParamField>
+
+### Check Modification Status
+
+Determine if the editor content differs from the file on disk:
+
+```java
+if (editor.isModified()) {
+  // Save prompt or auto-save logic
+  System.out.println("File has unsaved changes");
+}
+```
+
+<ParamField path="isModified()" type="boolean">
+  Returns `true` if content has been modified, `false` otherwise
+</ParamField>
+
+## Selection Management
+
+### Set Selection by Position
+
+Move the cursor to a specific position:
+
+```java
+import com.tom.rv2ide.models.Position;
+
+// Move to line 10, column 5 (0-based)
+Position pos = new Position(10, 5);
+editor.setSelection(pos);
+```
+
+<ParamField path="position" type="Position" required>
+  The position to move the cursor to. Line and column are 0-based.
+</ParamField>
+
+### Set Selection by Range
+
+Select a range of text:
+
+```java
+import com.tom.rv2ide.models.Range;
+
+// Select from (10,5) to (10,15)
+Position start = new Position(10, 5);
+Position end = new Position(10, 15);
+Range range = new Range(start, end);
+editor.setSelection(range);
+
+// Or use the two-parameter version
+editor.setSelection(start, end);
+```
+
+<ParamField path="range" type="Range" required>
+  The range to select. Includes start and end positions.
+</ParamField>
+
+### Select Around Position
+
+Set selection around a specific line and column:
+
+```java
+// Select word at line 15, column 10
+editor.setSelectionAround(15, 10);
+```
+
+## Cursor Information
+
+### Get Cursor Position
+
+Retrieve the current cursor position:
+
+```java
+Position cursor = editor.getCursorLSPPosition();
+int line = cursor.getLine();
+int column = cursor.getColumn();
+System.out.println("Cursor at: " + line + "," + column);
+```
+
+<ResponseField name="getCursorLSPPosition()" type="Position">
+  Returns the current cursor position in LSP format (0-based line and column)
+</ResponseField>
+
+### Get Selection Range
+
+Retrieve the selected range:
+
+```java
+Range selection = editor.getCursorLSPRange();
+Position start = selection.getStart();
+Position end = selection.getEnd();
+
+if (start.equals(end)) {
+  System.out.println("No selection (cursor only)");
+} else {
+  System.out.println("Selected from " + start + " to " + end);
+}
+```
+
+<ResponseField name="getCursorLSPRange()" type="Range">
+  Returns the selection range, or a range with identical start and end if no selection
+</ResponseField>
+
+## Content Validation
+
+### Validate Ranges
+
+Check if a range is valid for the current content:
+
+```java
+Range range = new Range(new Position(100, 0), new Position(101, 0));
+
+if (editor.isValidRange(range)) {
+  editor.setSelection(range);
+} else {
+  System.err.println("Invalid range for current content");
+}
+```
+
+<ParamField path="allowColumnEqual" type="boolean" default="false">
+  Whether to allow column values equal to the line's column count (useful for end-of-line positions)
+</ParamField>
+
+### Validate Positions
+
+```java
+Position pos = new Position(50, 20);
+
+if (!editor.isValidPosition(pos)) {
+  System.err.println("Position out of bounds");
+  return;
+}
+
+editor.setSelection(pos);
+```
+
+### Validate Lines and Columns
+
+```java
+int line = 100;
+if (editor.isValidLine(line)) {
+  int column = 50;
+  if (editor.isValidColumn(line, column)) {
+    editor.setSelectionAround(line, column);
+  }
+}
+```
+
+## Content Manipulation
+
+### Append Text
+
+Add text at the end of the editor:
+
+```java
+String newCode = "\n// TODO: Implement this\n";
+int lineAdded = editor.append(newCode);
+System.out.println("Text appended at line: " + lineAdded);
+```
+
+<ParamField path="text" type="CharSequence" required>
+  The text to append to the editor
+</ParamField>
+
+<ResponseField name="append()" type="int">
+  Returns the line number where the text was appended
+</ResponseField>
+
+### Replace Content
+
+Replace the entire editor content:
+
+```java
+String newContent = "package com.example;\n\npublic class Main {}";
+editor.replaceContent(newContent);
+```
+
+<Warning>
+  This replaces **all** content in the editor. Use with caution.
+</Warning>
+
+### Navigate to End
+
+Move cursor to the last line:
+
+```java
+editor.goToEnd();
+// Cursor is now at the end of the file
+```
+
+## LSP Integration
+
+### ILspEditor
+
+Extends editor functionality with Language Server Protocol features.
+
+**Source**: `editor/api/src/main/java/com/tom/rv2ide/editor/api/ILspEditor.kt:30`
+
+```kotlin
+package com.tom.rv2ide.editor.api
+
+import com.tom.rv2ide.lsp.api.ILanguageClient
+import com.tom.rv2ide.lsp.api.ILanguageServer
+import com.tom.rv2ide.lsp.models.Command
+import com.tom.rv2ide.lsp.models.SignatureHelp
+
+interface ILspEditor {
+  // Server connection
+  fun setLanguageServer(server: ILanguageServer?)
+  fun setLanguageClient(client: ILanguageClient?)
+  
+  // LSP commands
+  fun executeCommand(command: Command?)
+  
+  // Language features
+  fun signatureHelp()
+  fun showSignatureHelp(help: SignatureHelp?)
+  fun findDefinition()
+  fun findReferences()
+  fun expandSelection()
+  
+  // Window management
+  fun ensureWindowsDismissed()
+}
+```
+
+## Language Features
+
+### Connect Language Server
+
+```kotlin
+val languageServer: ILanguageServer = getJavaLanguageServer()
+lspEditor.setLanguageServer(languageServer)
+```
+
+### Execute LSP Command
+
+```kotlin
+import com.tom.rv2ide.lsp.models.Command
+
+val command = Command(
+  title = "Organize Imports",
+  command = "java.edit.organizeImports",
+  arguments = listOf(fileUri)
+)
+
+lspEditor.executeCommand(command)
+```
+
+### Trigger Signature Help
+
+Show parameter hints at the cursor:
+
+```kotlin
+// Automatically requests and shows signature help
+lspEditor.signatureHelp()
+```
+
+### Find Definition
+
+Navigate to symbol definition:
+
+```kotlin
+// Finds and navigates to definition at cursor
+lspEditor.findDefinition()
+```
+
+### Find References
+
+Find all references to the symbol at cursor:
+
+```kotlin
+// Finds all references and shows in search results
+lspEditor.findReferences()
+```
+
+### Expand Selection
+
+Expand selection semantically:
+
+```kotlin
+// Expands selection to next larger semantic unit
+lspEditor.expandSelection()
+```
+
+## Complete Example
+
+Here's a complete example showing various editor operations:
+
+```java
+import com.tom.rv2ide.editor.api.IEditor;
+import com.tom.rv2ide.editor.api.ILspEditor;
+import com.tom.rv2ide.models.Position;
+import com.tom.rv2ide.models.Range;
+
+public class EditorExample {
+  
+  public void manipulateEditor(IEditor editor, ILspEditor lspEditor) {
+    // Check if file is modified
+    if (editor.isModified()) {
+      System.out.println("File: " + editor.getFile().getName() + " has changes");
+    }
+    
+    // Get current cursor position
+    Position cursor = editor.getCursorLSPPosition();
+    System.out.println("Cursor at: " + cursor.getLine() + "," + cursor.getColumn());
+    
+    // Select a range
+    Position start = new Position(10, 0);
+    Position end = new Position(15, 0);
+    
+    if (editor.isValidPosition(start) && editor.isValidPosition(end)) {
+      editor.setSelection(start, end);
+      System.out.println("Selected lines 10-15");
+    }
+    
+    // Append new content
+    int line = editor.append("\n// New comment\n");
+    System.out.println("Added comment at line: " + line);
+    
+    // Navigate to end
+    editor.goToEnd();
+    
+    // Use LSP features
+    lspEditor.findDefinition();
+  }
+}
+```
+
+## Related APIs
+
+<CardGroup cols={2}>
+  <Card title="LSP API" icon="brackets-curly" href="./lsp-api">
+    Implement language server features
+  </Card>
+  
+  <Card title="Action System" icon="bolt" href="./action-system">
+    Add editor actions and commands
+  </Card>
+</CardGroup>

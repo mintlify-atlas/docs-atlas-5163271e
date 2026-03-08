@@ -1,0 +1,573 @@
+---
+title: Plugins
+description: Learn about plugins and modules in Android Code Studio
+icon: puzzle-piece
+---
+
+Android Code Studio supports plugins and custom modules to extend functionality and organize your projects.
+
+## Overview
+
+Plugins in Android Code Studio come in two forms:
+
+1. **Project Modules** - Additional modules within your Android project
+2. **Build System Plugins** - Gradle plugins and custom build logic
+
+<Note>
+  This guide focuses on project modules and Gradle plugins. Android Code Studio doesn't currently support IDE plugins like IntelliJ IDEA or Android Studio.
+</Note>
+
+## Project Modules
+
+Multi-module projects help organize code and improve build times.
+
+### Module Types
+
+The IDE supports these module types:
+
+<Tabs>
+  <Tab title="Android Library">
+    Reusable Android code libraries:
+    
+    ```kotlin title="library/build.gradle.kts"
+    plugins {
+        id("com.android.library")
+        id("org.jetbrains.kotlin.android")
+    }
+    
+    android {
+        namespace = "com.example.library"
+        compileSdk = 34
+    }
+    ```
+    
+    **Use for:**
+    - Shared UI components
+    - Common utilities
+    - Feature modules
+    - Library distribution
+  </Tab>
+
+  <Tab title="Java Library">
+    Pure Java/Kotlin libraries:
+    
+    ```kotlin title="javalib/build.gradle.kts"
+    plugins {
+        id("java-library")
+        id("org.jetbrains.kotlin.jvm")
+    }
+    
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    ```
+    
+    **Use for:**
+    - Business logic
+    - Data models
+    - API clients
+    - Platform-independent code
+  </Tab>
+
+  <Tab title="Dynamic Feature">
+    On-demand app features:
+    
+    ```kotlin title="feature/build.gradle.kts"
+    plugins {
+        id("com.android.dynamic-feature")
+        id("org.jetbrains.kotlin.android")
+    }
+    
+    android {
+        namespace = "com.example.feature"
+    }
+    ```
+    
+    **Use for:**
+    - Optional features
+    - Reducing initial APK size
+    - On-demand delivery
+  </Tab>
+</Tabs>
+
+### Creating Modules
+
+<Steps>
+  <Step title="Open Plugin Creator">
+    Select **File → New → Module** from the menu.
+  </Step>
+
+  <Step title="Choose Module Type">
+    Select:
+    - **Android Library** - For Android-specific code
+    - **Java Library** - For pure Java/Kotlin code
+  </Step>
+
+  <Step title="Configure Module">
+    Set:
+    - **Module name** - e.g., `library`, `feature-login`
+    - **Package name** - e.g., `com.example.library`
+    - **Language** - Java or Kotlin
+  </Step>
+
+  <Step title="Create Module">
+    The IDE generates:
+    - Module directory
+    - `build.gradle.kts`
+    - Source directories
+    - Updates `settings.gradle.kts`
+  </Step>
+</Steps>
+
+### Module Structure
+
+```
+MyProject/
+├── app/                  # Main application module
+│   ├── src/
+│   └── build.gradle.kts
+├── library/              # Android library module
+│   ├── src/
+│   └── build.gradle.kts
+├── feature-login/        # Feature module
+│   ├── src/
+│   └── build.gradle.kts
+└── settings.gradle.kts   # Includes all modules
+```
+
+### Module Dependencies
+
+Reference modules in `build.gradle.kts`:
+
+```kotlin title="app/build.gradle.kts"
+dependencies {
+    // Local modules
+    implementation(project(":library"))
+    implementation(project(":feature-login"))
+    
+    // External libraries
+    implementation("androidx.appcompat:appcompat:1.6.1")
+}
+```
+
+## Gradle Plugins
+
+Gradle plugins extend build functionality.
+
+### Android Gradle Plugin (AGP)
+
+The core plugin for Android development:
+
+```kotlin title="build.gradle.kts"
+plugins {
+    id("com.android.application") version "8.2.0" apply false
+    id("com.android.library") version "8.2.0" apply false
+}
+```
+
+<Warning>
+  Android Code Studio requires AGP 7.2.0 or newer. Older versions are not supported.
+</Warning>
+
+### Kotlin Plugin
+
+For Kotlin support:
+
+```kotlin title="build.gradle.kts"
+plugins {
+    id("org.jetbrains.kotlin.android") version "1.9.20" apply false
+    id("org.jetbrains.kotlin.jvm") version "1.9.20" apply false
+}
+```
+
+### Common Plugins
+
+<CodeGroup>
+  ```kotlin Google Services
+  // Root build.gradle.kts
+  plugins {
+      id("com.google.gms.google-services") version "4.4.0" apply false
+  }
+  
+  // app/build.gradle.kts
+  plugins {
+      id("com.google.gms.google-services")
+  }
+  ```
+
+  ```kotlin Firebase Crashlytics
+  plugins {
+      id("com.google.firebase.crashlytics") version "2.9.9" apply false
+  }
+  ```
+
+  ```kotlin Navigation SafeArgs
+  plugins {
+      id("androidx.navigation.safeargs.kotlin") version "2.7.6" apply false
+  }
+  ```
+
+  ```kotlin Hilt
+  plugins {
+      id("com.google.dagger.hilt.android") version "2.48" apply false
+  }
+  ```
+
+  ```kotlin Serialization
+  plugins {
+      id("org.jetbrains.kotlin.plugin.serialization") version "1.9.20" apply false
+  }
+  ```
+</CodeGroup>
+
+### Applying Plugins
+
+<Tabs>
+  <Tab title="Kotlin DSL">
+    ```kotlin title="app/build.gradle.kts"
+    plugins {
+        id("com.android.application")
+        id("org.jetbrains.kotlin.android")
+        id("com.google.gms.google-services")
+    }
+    ```
+  </Tab>
+
+  <Tab title="Groovy">
+    ```groovy title="app/build.gradle"
+    plugins {
+        id 'com.android.application'
+        id 'org.jetbrains.kotlin.android'
+        id 'com.google.gms.google-services'
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Custom Build Logic
+
+Create custom Gradle logic:
+
+### buildSrc Module
+
+For build configuration:
+
+```
+MyProject/
+├── buildSrc/
+│   ├── src/main/kotlin/
+│   │   ├── Dependencies.kt
+│   │   └── Versions.kt
+│   └── build.gradle.kts
+```
+
+```kotlin title="buildSrc/src/main/kotlin/Dependencies.kt"
+object Versions {
+    const val kotlin = "1.9.20"
+    const val agp = "8.2.0"
+    const val appCompat = "1.6.1"
+}
+
+object Deps {
+    const val kotlinStdlib = "org.jetbrains.kotlin:kotlin-stdlib:${Versions.kotlin}"
+    const val appCompat = "androidx.appcompat:appcompat:${Versions.appCompat}"
+}
+```
+
+Use in build scripts:
+
+```kotlin title="app/build.gradle.kts"
+dependencies {
+    implementation(Deps.kotlinStdlib)
+    implementation(Deps.appCompat)
+}
+```
+
+### Version Catalogs
+
+Modern dependency management:
+
+```toml title="gradle/libs.versions.toml"
+[versions]
+kotlin = "1.9.20"
+appcompat = "1.6.1"
+
+[libraries]
+appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+material = { module = "com.google.android.material:material", version = "1.11.0" }
+
+[plugins]
+android-application = { id = "com.android.application", version = "8.2.0" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+```
+
+Use in build scripts:
+
+```kotlin title="app/build.gradle.kts"
+plugins {
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+}
+
+dependencies {
+    implementation(libs.appcompat)
+    implementation(libs.material)
+}
+```
+
+## Template System
+
+Android Code Studio includes a template system for project creation.
+
+### Available Templates
+
+From the source code analysis:
+
+```kotlin title="templates-impl/"
+- emptyActivity
+- basicActivity
+- bottomNavActivity
+- navDrawerActivity
+- tabbedActivity
+- composeActivity
+- withCpp (Native C++)
+- noActivity
+```
+
+### Template Structure
+
+```kotlin title="Template API"
+interface Template {
+    val templateName: Int        // Display name resource
+    val thumb: Int              // Thumbnail resource
+    val widgets: List<Widget>   // Configuration UI
+    val recipe: TemplateRecipe  // Generation logic
+}
+```
+
+### Creating Custom Templates
+
+While the IDE doesn't expose custom template creation in the UI, you can create module templates:
+
+1. Create a template module
+2. Configure as needed
+3. Copy/paste for similar modules
+
+## Plugin Configuration
+
+Configure plugin behavior:
+
+### Android Plugin
+
+```kotlin title="app/build.gradle.kts"
+android {
+    // Compilation options
+    compileSdk = 34
+    
+    defaultConfig {
+        minSdk = 21
+        targetSdk = 34
+    }
+    
+    // Build features
+    buildFeatures {
+        viewBinding = true
+        dataBinding = false
+        compose = false
+    }
+    
+    // Lint options
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
+}
+```
+
+### Kotlin Plugin
+
+```kotlin title="app/build.gradle.kts"
+kotlin {
+    jvmToolchain(17)
+}
+
+kotlinOptions {
+    jvmTarget = "17"
+    freeCompilerArgs += listOf(
+        "-opt-in=kotlin.RequiresOptIn"
+    )
+}
+```
+
+## Module Communication
+
+Share code between modules:
+
+### Expose APIs
+
+```kotlin title="library/src/main/kotlin/Library.kt"
+package com.example.library
+
+class LibraryClass {
+    fun doSomething(): String {
+        return "Hello from library"
+    }
+}
+```
+
+### Consume APIs
+
+```kotlin title="app/src/main/kotlin/MainActivity.kt"
+import com.example.library.LibraryClass
+
+class MainActivity : AppCompatActivity() {
+    private val library = LibraryClass()
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        val result = library.doSomething()
+        Log.d("MainActivity", result)
+    }
+}
+```
+
+## Dependency Management
+
+### Module Dependencies
+
+```kotlin title="app/build.gradle.kts"
+dependencies {
+    // Project modules
+    implementation(project(":library"))
+    api(project(":core"))           // Transitive
+    compileOnly(project(":annotations"))
+    
+    // Different configurations
+    debugImplementation(project(":debug-tools"))
+    releaseImplementation(project(":release-tools"))
+}
+```
+
+### Repository Configuration
+
+```kotlin title="settings.gradle.kts"
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+## Build Variants
+
+Configure per-module variants:
+
+```kotlin title="library/build.gradle.kts"
+android {
+    buildTypes {
+        debug {
+            isMinifyEnabled = false
+        }
+        release {
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+    
+    flavorDimensions += "version"
+    productFlavors {
+        create("free") {
+            dimension = "version"
+        }
+        create("pro") {
+            dimension = "version"
+        }
+    }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Modularize by Feature" icon="layer-group">
+    Organize modules by features, not layers. This improves build times and team collaboration.
+  </Card>
+
+  <Card title="Use API Dependencies" icon="share-nodes">
+    Use `api` instead of `implementation` when dependencies must be transitive.
+  </Card>
+
+  <Card title="Keep Modules Focused" icon="bullseye">
+    Each module should have a single, well-defined purpose.
+  </Card>
+
+  <Card title="Version Consistently" icon="code-branch">
+    Use version catalogs or buildSrc to maintain consistent dependency versions.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Module Not Found">
+    **Error**: `Project ':module' not found`
+    
+    **Solution**:
+    1. Check `settings.gradle.kts` includes the module:
+       ```kotlin
+       include(":app", ":library")
+       ```
+    2. Verify the module directory exists
+    3. Run **File → Sync Project with Gradle Files**
+  </Accordion>
+
+  <Accordion title="Circular Dependencies">
+    **Error**: `Circular dependency between...`
+    
+    **Solution**:
+    1. Review module dependency graph
+    2. Extract shared code to a common module
+    3. Use dependency inversion principle
+  </Accordion>
+
+  <Accordion title="Plugin Version Conflicts">
+    **Error**: `Plugin version mismatch`
+    
+    **Solution**:
+    Ensure all modules use compatible versions:
+    ```kotlin
+    // Root build.gradle.kts
+    plugins {
+        id("com.android.application") version "8.2.0" apply false
+        id("com.android.library") version "8.2.0" apply false
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Resource Conflicts">
+    **Error**: `Duplicate resources`
+    
+    **Solution**:
+    Add resource prefixes:
+    ```kotlin
+    android {
+        resourcePrefix = "library_"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+- [Build your modular app](/guides/building-apps)
+- [Configure environment variables](/guides/environment-variables) for modules
+- [Debug module issues](/guides/debugging)
+- [Use the AI Agent](/guides/using-ai-agent) to generate module code

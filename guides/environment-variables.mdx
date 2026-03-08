@@ -1,0 +1,591 @@
+---
+title: Environment Variables
+description: Configure custom environment variables for builds and terminal in Android Code Studio
+icon: sliders
+---
+
+Android Code Studio allows you to configure custom environment variables for both the build system and the integrated terminal.
+
+## Overview
+
+Environment variables control:
+
+- **Build behavior** - JDK paths, tool locations, build flags
+- **Terminal environment** - PATH, library paths, tool availability
+- **Gradle execution** - Memory limits, caching, parallel execution
+- **Android tooling** - SDK, NDK, platform tools locations
+
+<Note>
+  Android Code Studio automatically configures essential environment variables. Custom variables let you override or extend this configuration.
+</Note>
+
+## Built-in Environment
+
+The IDE provides a preconfigured environment:
+
+```kotlin title="Environment.kt"
+object Environment {
+    val HOME: File          // IDE home directory
+    val TMP_DIR: File       // Temporary files
+    val PREFIX: File        // Prefix for tools
+    val BIN_DIR: File       // Binary executables
+    val LIB_DIR: File       // Native libraries
+    val PROJECTS_DIR: File  // Default projects location
+    val AAPT2: File        // AAPT2 binary
+    val ANDROID_SDK: File   // Android SDK root
+}
+```
+
+### Build Environment
+
+When building, the IDE configures:
+
+```kotlin title="GradleBuildService.kt:584-621"
+val finalEnv = processBuilder.environment()
+
+// Termux base environment
+finalEnv.putAll(termuxEnv)
+
+// Custom IDE environment
+Environment.putEnvironment(customEnv, false)
+finalEnv.putAll(customEnv)
+
+// PATH configuration
+val binDirPath = Environment.BIN_DIR.absolutePath
+val prefixBinPath = File(Environment.PREFIX, "bin").absolutePath
+finalEnv["PATH"] = "$binDirPath:$prefixBinPath:$currentPath"
+
+// Library path
+val libDirPath = Environment.LIB_DIR.absolutePath
+finalEnv["LD_LIBRARY_PATH"] = libDirPath
+
+// Temp directory
+finalEnv["TMPDIR"] = Environment.TMP_DIR.absolutePath
+```
+
+## Gradle Properties
+
+The primary way to configure build environment is through `gradle.properties`.
+
+### Project gradle.properties
+
+Create or edit `gradle.properties` in your project root:
+
+```properties title="gradle.properties"
+# JVM Memory
+org.gradle.jvmargs=-Xmx512m -Dfile.encoding=UTF-8
+
+# Parallel Execution
+org.gradle.parallel=true
+
+# Build Cache
+org.gradle.caching=true
+
+# Configuration Cache (Gradle 7.0+)
+org.gradle.configuration-cache=true
+
+# Gradle Daemon
+org.gradle.daemon=true
+
+# AndroidX
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+
+# Kotlin Code Style
+kotlin.code.style=official
+```
+
+### Global gradle.properties
+
+Set system-wide Gradle properties:
+
+**Location**: `~/.gradle/gradle.properties`
+
+```properties title="~/.gradle/gradle.properties"
+# Applied to all projects
+org.gradle.jvmargs=-Xmx768m
+org.gradle.daemon=true
+
+# Android SDK location (if not auto-detected)
+sdk.dir=/path/to/android-sdk
+ndk.dir=/path/to/android-ndk
+```
+
+## local.properties
+
+For machine-specific or sensitive configuration:
+
+```properties title="local.properties"
+# SDK/NDK paths (auto-generated)
+sdk.dir=/data/data/com.tom.rv2ide/files/android-sdk
+ndk.dir=/data/data/com.tom.rv2ide/files/android-ndk
+
+# Custom paths
+cmake.dir=/data/data/com.tom.rv2ide/files/cmake
+
+# Signing (DO NOT commit to version control)
+keystore.path=/path/to/keystore.jks
+keystore.password=your-password
+key.alias=your-alias
+key.password=your-key-password
+```
+
+<Warning>
+  Never commit `local.properties` with sensitive data to version control. Add it to `.gitignore`.
+</Warning>
+
+## Build Script Variables
+
+Access environment variables in build scripts:
+
+### Kotlin DSL
+
+```kotlin title="build.gradle.kts"
+val customProperty = providers.gradleProperty("custom.property")
+    .getOrElse("default-value")
+
+val envVariable = providers.environmentVariable("MY_VAR")
+    .getOrElse("default-value")
+
+android {
+    defaultConfig {
+        // Use properties
+        buildConfigField("String", "API_KEY", "\"${envVariable.get()}\"")
+    }
+}
+```
+
+### Groovy
+
+```groovy title="build.gradle"
+def customProperty = project.findProperty('custom.property') ?: 'default-value'
+def envVariable = System.getenv('MY_VAR') ?: 'default-value'
+
+android {
+    defaultConfig {
+        buildConfigField "String", "API_KEY", "\"${envVariable}\""
+    }
+}
+```
+
+## Terminal Environment
+
+Customize the integrated terminal environment.
+
+### Termux Environment
+
+The terminal uses Termux shell environment:
+
+```kotlin title="GradleBuildService.kt:582"
+val termuxEnv = TermuxShellEnvironment().getEnvironment(this, false)
+```
+
+This provides:
+- Standard Unix utilities
+- Package manager (pkg)
+- Shell (bash, zsh)
+- Core tools (git, python, etc.)
+
+### Custom Terminal Variables
+
+**Settings → Terminal → Environment**
+
+Add custom variables:
+
+```bash
+MY_CUSTOM_VAR=value
+PATH=$PATH:/custom/path
+JAVA_HOME=/path/to/jdk
+```
+
+### Shell Configuration
+
+Edit shell config files:
+
+<Tabs>
+  <Tab title="Bash">
+    Edit `~/.bashrc`:
+    
+    ```bash title="~/.bashrc"
+    # Custom environment
+    export ANDROID_SDK_ROOT=$HOME/android-sdk
+    export PATH=$PATH:$ANDROID_SDK_ROOT/tools
+    
+    # Aliases
+    alias ll='ls -la'
+    alias gst='git status'
+    ```
+  </Tab>
+
+  <Tab title="Zsh">
+    Edit `~/.zshrc`:
+    
+    ```zsh title="~/.zshrc"
+    # Custom environment
+    export ANDROID_SDK_ROOT=$HOME/android-sdk
+    export PATH=$PATH:$ANDROID_SDK_ROOT/tools
+    
+    # Oh My Zsh plugins
+    plugins=(git gradle android)
+    ```
+  </Tab>
+</Tabs>
+
+## Common Variables
+
+### Android SDK/NDK
+
+```properties
+# SDK location
+ANDROID_SDK_ROOT=/path/to/android-sdk
+ANDROID_HOME=/path/to/android-sdk  # Legacy, prefer SDK_ROOT
+
+# NDK location
+ANDROID_NDK_HOME=/path/to/android-ndk
+NDK_ROOT=/path/to/android-ndk
+```
+
+### Java/Kotlin
+
+```properties
+# JDK location
+JAVA_HOME=/path/to/jdk
+
+# Kotlin compiler
+KOTLIN_HOME=/path/to/kotlin
+```
+
+### Build Tools
+
+```properties
+# CMake
+CMAKE_PATH=/path/to/cmake
+
+# Python
+PYTHON_PATH=/path/to/python
+
+# Git
+GIT_PATH=/path/to/git
+```
+
+### Build Behavior
+
+```properties
+# Gradle options
+org.gradle.jvmargs=-Xmx512m -XX:MaxMetaspaceSize=256m
+org.gradle.parallel=true
+org.gradle.caching=true
+org.gradle.daemon=true
+
+# Android options
+android.enableJetifier=false  # Only if needed for old libraries
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+
+# Build output
+android.enableBuildCache=true
+```
+
+## Build Preferences
+
+Configure build flags in the IDE:
+
+**Settings → Build Preferences**
+
+```kotlin title="BuildPreferences.kt"
+object BuildPreferences {
+    var isStacktraceEnabled: Boolean
+    var isInfoEnabled: Boolean
+    var isDebugEnabled: Boolean
+    var isScanEnabled: Boolean
+    var isWarningModeAllEnabled: Boolean
+    var isBuildCacheEnabled: Boolean
+    var isOfflineEnabled: Boolean
+}
+```
+
+These add arguments to Gradle:
+
+```kotlin title="GradleBuildService.kt:393-414"
+if (BuildPreferences.isStacktraceEnabled) {
+    extraArgs.add("--stacktrace")
+}
+if (BuildPreferences.isInfoEnabled) {
+    extraArgs.add("--info")
+}
+if (BuildPreferences.isDebugEnabled) {
+    extraArgs.add("--debug")
+}
+if (BuildPreferences.isScanEnabled) {
+    extraArgs.add("--scan")
+}
+if (BuildPreferences.isOfflineEnabled) {
+    extraArgs.add("--offline")
+}
+```
+
+## AAPT2 Override
+
+The IDE automatically overrides AAPT2:
+
+```kotlin title="GradleBuildService.kt:390"
+extraArgs.add("-Pandroid.aapt2FromMavenOverride=" + Environment.AAPT2.absolutePath)
+```
+
+This ensures the correct AAPT2 binary (optimized for Android) is used.
+
+<Note>
+  You cannot override this - it's essential for builds to work on Android devices.
+</Note>
+
+## Memory Configuration
+
+### JVM Heap
+
+```properties title="gradle.properties"
+# Minimum heap
+org.gradle.jvmargs=-Xms256m
+
+# Maximum heap (critical for Android devices)
+org.gradle.jvmargs=-Xmx512m
+
+# Both
+org.gradle.jvmargs=-Xms256m -Xmx512m
+```
+
+<Warning>
+  Be conservative with memory allocation. Most Android devices have 2-6 GB RAM total.
+  
+  - Small projects: `-Xmx512m`
+  - Medium projects: `-Xmx768m`
+  - Large projects: `-Xmx1024m`
+</Warning>
+
+### Metaspace
+
+```properties
+org.gradle.jvmargs=-XX:MaxMetaspaceSize=256m
+```
+
+Limits metadata memory usage.
+
+### File Encoding
+
+```properties
+org.gradle.jvmargs=-Dfile.encoding=UTF-8
+```
+
+Ensures consistent encoding across systems.
+
+## Path Configuration
+
+Extend PATH for custom tools:
+
+### In gradle.properties
+
+```properties
+systemProp.PATH=/custom/path:${PATH}
+```
+
+### In Build Scripts
+
+```kotlin title="build.gradle.kts"
+tasks.register<Exec>("customTask") {
+    environment("PATH", "/custom/path:${System.getenv("PATH")}")
+    commandLine("my-tool", "arg1", "arg2")
+}
+```
+
+### In Terminal
+
+```bash
+export PATH=/custom/path:$PATH
+```
+
+## Proxy Configuration
+
+For networks requiring proxies:
+
+```properties title="gradle.properties"
+# HTTP Proxy
+systemProp.http.proxyHost=proxy.example.com
+systemProp.http.proxyPort=8080
+systemProp.http.proxyUser=username
+systemProp.http.proxyPassword=password
+
+# HTTPS Proxy
+systemProp.https.proxyHost=proxy.example.com
+systemProp.https.proxyPort=8080
+systemProp.https.proxyUser=username
+systemProp.https.proxyPassword=password
+
+# No proxy for these hosts
+systemProp.http.nonProxyHosts=*.example.com|localhost
+```
+
+## Custom Build Properties
+
+Define project-specific properties:
+
+```properties title="gradle.properties"
+# API Configuration
+api.base.url=https://api.example.com
+api.key=your-api-key
+
+# Feature Flags
+feature.analytics.enabled=true
+feature.crashlytics.enabled=false
+
+# Build Info
+build.version.code=1
+build.version.name=1.0.0
+```
+
+Access in build scripts:
+
+```kotlin title="build.gradle.kts"
+val apiBaseUrl = project.property("api.base.url") as String
+val analyticsEnabled = project.property("feature.analytics.enabled").toString().toBoolean()
+
+android {
+    defaultConfig {
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("boolean", "ANALYTICS_ENABLED", "$analyticsEnabled")
+    }
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Variables Not Applied">
+    **Issue**: Changes to environment variables don't take effect
+    
+    **Solution**:
+    1. For `gradle.properties`: Run **File → Sync Project with Gradle Files**
+    2. For terminal: Restart the terminal session
+    3. For shell config: Run `source ~/.bashrc` or restart terminal
+  </Accordion>
+
+  <Accordion title="OutOfMemoryError">
+    **Issue**: Build fails with heap space errors
+    
+    **Solution**:
+    Increase heap size in `gradle.properties`:
+    ```properties
+    org.gradle.jvmargs=-Xmx768m
+    ```
+    
+    Or enable offline mode to reduce memory usage:
+    ```properties
+    org.gradle.offline=true
+    ```
+  </Accordion>
+
+  <Accordion title="SDK Not Found">
+    **Issue**: "SDK location not found"
+    
+    **Solution**:
+    Add to `local.properties`:
+    ```properties
+    sdk.dir=/data/data/com.tom.rv2ide/files/android-sdk
+    ```
+    
+    Or set environment variable:
+    ```bash
+    export ANDROID_SDK_ROOT=/path/to/sdk
+    ```
+  </Accordion>
+
+  <Accordion title="Path Issues">
+    **Issue**: Tools not found in PATH
+    
+    **Solution**:
+    Check PATH in terminal:
+    ```bash
+    echo $PATH
+    ```
+    
+    Add missing directories:
+    ```bash
+    export PATH=/missing/path:$PATH
+    ```
+    
+    Make permanent in `~/.bashrc`.
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use gradle.properties" icon="file-lines">
+    Prefer `gradle.properties` over environment variables for build configuration.
+  </Card>
+
+  <Card title="Keep Secrets Safe" icon="lock">
+    Never commit API keys or passwords. Use `local.properties` or environment variables.
+  </Card>
+
+  <Card title="Document Custom Variables" icon="book">
+    Add comments explaining what each custom variable does.
+  </Card>
+
+  <Card title="Test Changes" icon="flask">
+    Test environment changes with a clean build to ensure they work.
+  </Card>
+</CardGroup>
+
+## Examples
+
+### Multi-Environment Setup
+
+```properties title="gradle.properties"
+# Development
+dev.api.url=https://dev-api.example.com
+dev.api.key=dev-key-123
+
+# Staging
+staging.api.url=https://staging-api.example.com
+staging.api.key=staging-key-456
+
+# Production
+prod.api.url=https://api.example.com
+prod.api.key=prod-key-789
+```
+
+```kotlin title="build.gradle.kts"
+android {
+    buildTypes {
+        debug {
+            buildConfigField("String", "API_URL", 
+                "\"${project.property("dev.api.url")}\"")
+        }
+        release {
+            buildConfigField("String", "API_URL", 
+                "\"${project.property("prod.api.url")}\"")
+        }
+    }
+}
+```
+
+### Custom Tool Integration
+
+```bash title="~/.bashrc"
+# Add custom tools to PATH
+export CUSTOM_TOOLS="$HOME/custom-tools"
+export PATH="$CUSTOM_TOOLS/bin:$PATH"
+
+# Set tool-specific variables
+export MY_TOOL_HOME="$CUSTOM_TOOLS/my-tool"
+export MY_TOOL_CONFIG="$HOME/.my-tool-config"
+
+# Gradle optimization for Android
+export GRADLE_OPTS="-Xmx512m -Dorg.gradle.daemon=true"
+```
+
+## Next Steps
+
+- [Build your app](/guides/building-apps) with custom environment
+- [Use plugins](/guides/plugins) that depend on environment variables
+- [Debug issues](/guides/debugging) related to configuration
+- [Configure the AI Agent](/guides/using-ai-agent) using environment variables

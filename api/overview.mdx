@@ -1,0 +1,82 @@
+---
+title: API Reference Overview
+description: Complete API reference for Android Code Studio extensibility
+---
+
+Android Code Studio provides a comprehensive set of APIs that allow developers to extend and customize the IDE. This reference documentation covers all public APIs available for plugin development.
+
+## Architecture
+
+The IDE is built on a modular architecture with clear separation between:
+
+- **Editor APIs** - Text editing, syntax highlighting, and code manipulation
+- **Project APIs** - Project management, workspace handling, and file operations
+- **LSP APIs** - Language Server Protocol integration for language features
+- **Tooling APIs** - Gradle Tooling API integration for builds
+- **Template APIs** - Project and file template system
+- **Action System** - Extensible action registration and execution
+
+## Getting Started
+
+To start developing plugins for Android Code Studio:
+
+1. Review the [Architecture](./architecture) documentation to understand the IDE structure
+2. Explore specific API sections based on your extension needs
+3. Check out [Plugin Development](./plugin-development) for best practices
+
+## API Categories
+
+<CardGroup cols={2}>
+  <Card title="Editor API" icon="code" href="./editor-api">
+    Access and manipulate editor instances, text content, and selections
+  </Card>
+  
+  <Card title="Project API" icon="folder-tree" href="./project-api">
+    Manage projects, workspaces, and module structures
+  </Card>
+  
+  <Card title="LSP API" icon="brackets-curly" href="./lsp-api">
+    Implement language servers for code completion and navigation
+  </Card>
+  
+  <Card title="Tooling API" icon="hammer" href="./tooling-api">
+    Interact with Gradle builds and task execution
+  </Card>
+  
+  <Card title="Template API" icon="file-plus" href="./template-api">
+    Create custom project and file templates
+  </Card>
+  
+  <Card title="Action System" icon="bolt" href="./action-system">
+    Register custom actions in toolbars and menus
+  </Card>
+</CardGroup>
+
+## Package Structure
+
+The API is organized into the following main packages:
+
+```
+com.tom.rv2ide.editor.api       // Editor interfaces
+com.tom.rv2ide.projects          // Project management
+com.tom.rv2ide.lsp.api           // Language Server Protocol
+com.tom.rv2ide.tooling.api       // Gradle Tooling API
+com.tom.rv2ide.templates         // Template system
+com.tom.rv2ide.actions           // Action system
+```
+
+## API Stability
+
+All APIs documented here are considered public and stable unless marked otherwise. Breaking changes will be announced in release notes.
+
+<Note>
+  **Source Code**: This documentation is generated from the actual source code at `~/workspace/source/`
+</Note>
+
+## Support
+
+For questions about the API or plugin development:
+
+- Check the source code in `~/workspace/source/`
+- Review example implementations in the codebase
+- Report issues on the project's issue tracker

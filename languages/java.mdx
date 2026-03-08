@@ -1,0 +1,374 @@
+---
+title: Java Language Support
+description: Comprehensive Java language server with intelligent code completion, diagnostics, and navigation features for Android development
+---
+
+Android Code Studio provides comprehensive Java language support through an integrated Java Language Server Protocol (LSP) implementation powered by the OpenJDK compiler.
+
+## Language Server Features
+
+The Java LSP provides intelligent code analysis and editing capabilities:
+
+### Code Completion
+
+<CardGroup cols={2}>
+  <Card title="Smart Completions" icon="lightbulb">
+    Context-aware suggestions for classes, methods, fields, and variables with type information
+  </Card>
+  <Card title="Auto-Import" icon="download">
+    Automatic import statement generation when completing types from external packages
+  </Card>
+  <Card title="Snippet Support" icon="code">
+    Built-in code snippets for common patterns like loops, conditionals, and try-catch blocks
+  </Card>
+  <Card title="Parameter Hints" icon="info-circle">
+    Method parameter information and signature help during invocation
+  </Card>
+</CardGroup>
+
+The completion engine uses the `FindCompletionsAt` visitor to locate completion points in the AST and provides suggestions based on:
+- Local variables and method parameters
+- Class members (fields and methods)
+- Imported and classpath types
+- Java language keywords
+
+**Implementation:** The completion provider analyzes the compilation unit tree at the cursor position to determine the appropriate completion context. Source: `java/lsp/src/main/java/com/tom/rv2ide/lsp/java/visitors/FindCompletionsAt.java`
+
+### Diagnostics
+
+Real-time error detection and reporting:
+
+- **Compilation Errors**: Syntax errors, type mismatches, and undeclared variables
+- **Semantic Analysis**: Method signature conflicts, accessibility issues, and unresolved symbols
+- **Quick Fixes**: Automated fixes for common issues like missing imports or method implementations
+
+<Note>
+  The diagnostic system uses incremental compilation to minimize performance impact. Only changed methods are reparsed when possible, utilizing the `PartialReparser` for efficient updates.
+</Note>
+
+### Code Navigation
+
+<Tabs>
+  <Tab title="Go to Definition">
+    Jump to the declaration of any class, method, or field. The language server searches both source files and compiled classpath entries.
+
+    ```java
+    // Click on 'Button' to navigate to its definition
+    Button myButton = findViewById(R.id.button);
+    ```
+  </Tab>
+  <Tab title="Find References">
+    Locate all usages of a symbol across your project. The reference finder intelligently filters based on import statements and package visibility.
+
+    ```java
+    // Find all references to this method
+    public void handleClick(View view) {
+        // Method implementation
+    }
+    ```
+  </Tab>
+  <Tab title="Type Hierarchy">
+    Explore class inheritance and interface implementations through the project structure.
+  </Tab>
+</Tabs>
+
+## Code Examples
+
+### Basic Java Class
+
+```java MainActivity.java
+package com.example.myapp;
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.widget.TextView;
+
+public class MainActivity extends Activity {
+    private TextView textView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        
+        textView = findViewById(R.id.textView);
+        textView.setText("Hello, Android!");
+    }
+}
+```
+
+### Advanced Features
+
+<Tabs>
+  <Tab title="Lambdas">
+    ```java
+    // Java 8 lambda expressions
+    button.setOnClickListener(view -> {
+        Toast.makeText(this, "Clicked!", Toast.LENGTH_SHORT).show();
+    });
+
+    // Method references
+    list.forEach(System.out::println);
+    ```
+  </Tab>
+  <Tab title="Streams">
+    ```java
+    // Stream API operations
+    List<String> filtered = names.stream()
+        .filter(name -> name.startsWith("A"))
+        .map(String::toUpperCase)
+        .collect(Collectors.toList());
+    ```
+  </Tab>
+  <Tab title="Records">
+    ```java
+    // Java records (requires Java 16+)
+    public record User(String name, int age) {
+        public boolean isAdult() {
+            return age >= 18;
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Supported Language Features
+
+### Core Java Features
+
+- **Java 8-17 Syntax**: Full support for modern Java language features
+- **Generics**: Complete type parameter inference and validation
+- **Annotations**: Processing of standard and custom annotations
+- **Inner Classes**: Anonymous classes, local classes, and member classes
+- **Enums**: Enumeration types with methods and constructors
+
+### Android-Specific
+
+- **Android API Completion**: Context-aware suggestions for Android SDK classes
+- **Resource References**: Integration with R class for resource access
+- **Manifest Awareness**: Understanding of AndroidManifest.xml configurations
+
+## Code Rewrites and Refactoring
+
+The language server provides automated code transformations:
+
+<CardGroup cols={2}>
+  <Card title="Add Import" icon="plus">
+    Automatically insert import statements for unresolved types
+  </Card>
+  <Card title="Implement Abstract Methods" icon="code-branch">
+    Generate stubs for inherited abstract methods
+  </Card>
+  <Card title="Remove Unused" icon="trash">
+    Clean up unused imports, methods, and classes
+  </Card>
+  <Card title="Generate Constructors" icon="wrench">
+    Create constructors for record types and regular classes
+  </Card>
+</CardGroup>
+
+**Available Rewrites** (from `java/lsp/src/main/java/com/tom/rv2ide/lsp/java/rewrite/`):
+- `AddImport`: Insert missing import statements
+- `ImplementAbstractMethods`: Implement methods from interfaces/abstract classes
+- `RemoveMethod`, `RemoveClass`, `RemoveException`: Code cleanup operations
+- `CreateMissingMethod`: Generate method stubs for undefined references
+- `AddSuppressWarningAnnotation`: Add `@SuppressWarnings` annotations
+
+## Snippets
+
+Built-in code snippets accelerate development:
+
+<Tabs>
+  <Tab title="Control Flow">
+    ```java
+    // Type 'for' and press Tab
+    for(int i = 0; i < count; ++i) {
+        // Loop body
+    }
+
+    // Type 'foreach' and press Tab
+    for(element : iterable) {
+        // Loop body
+    }
+
+    // Type 'while' and press Tab
+    while(condition) {
+        // Loop body
+    }
+    ```
+  </Tab>
+  <Tab title="Exception Handling">
+    ```java
+    // Type 'trycatch' and press Tab
+    try {
+        // Code that may throw
+    } catch(Exception err) {
+        // Error handling
+    }
+
+    // Type 'tryresources' and press Tab
+    try (resource) {
+        // Code using resource
+    } catch(Exception err) {
+        // Error handling
+    }
+    ```
+  </Tab>
+  <Tab title="Conditionals">
+    ```java
+    // Type 'if' and press Tab
+    if(condition) {
+        // If body
+    }
+
+    // Type 'ifelse' and press Tab
+    if(condition) {
+        // If body
+    } else {
+        // Else body
+    }
+
+    // Type 'ifnotnull' and press Tab
+    if(object != null) {
+        // Null check body
+    }
+    ```
+  </Tab>
+</Tabs>
+
+Snippets are defined in `java/lsp/src/main/assets/data/editor/java/` and support placeholders, tab stops, and transformations.
+
+## Compiler Configuration
+
+### Source and Target Compatibility
+
+The Java compiler service (`JavaCompilerService`) can be configured through the module's build configuration:
+
+```java
+public class JavaCompilerConfig {
+    private String sourceCompatibility = "1.8";
+    private String targetCompatibility = "1.8";
+    private List<String> compileOptions = new ArrayList<>();
+}
+```
+
+### Classpath Management
+
+The language server automatically manages classpaths:
+
+- **Boot Classpath**: Android SDK classes from `android.jar`
+- **Compile Classpath**: Project dependencies and library JARs
+- **Source Classpath**: Project source directories
+
+<Note>
+  The `SourceFileManager` handles file resolution across source paths, ensuring efficient lookup of Java source files during compilation and navigation.
+</Note>
+
+## Performance Optimizations
+
+### Incremental Compilation
+
+The compiler uses several strategies to minimize compilation overhead:
+
+1. **Cached Compilation**: Reuses previous compilation results when source files haven't changed
+2. **Partial Reparsing**: Only recompiles modified methods within a class (when possible)
+3. **Synchronized Tasks**: Manages compilation requests to prevent redundant work
+
+```java
+// From JavaCompilerService.java
+private boolean needsCompilation(Collection<? extends JavaFileObject> sources) {
+    if (cachedModified.size() != sources.size()) {
+        return true;
+    }
+    for (JavaFileObject f : sources) {
+        if (!cachedModified.containsKey(f) || 
+            f.getLastModified() != cachedModified.get(f)) {
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+### Caching
+
+Multiple cache layers improve responsiveness:
+
+- **Type Declaration Cache**: Caches parsed compilation units
+- **Import Cache**: Stores import statements per file
+- **Word Search Cache**: Optimizes text-based symbol searches
+
+## Limitations
+
+<Warning>
+  The following features have limited or no support:
+  
+  - **Multi-module Projects**: Cross-module navigation may be incomplete
+  - **External Source Attachment**: Source code for external libraries must be provided
+  - **Incremental Build**: Full recompilation is required after structural changes
+  - **Code Generation**: Some annotation processors may not be fully supported
+</Warning>
+
+## API Reference
+
+Key interfaces and classes:
+
+### CompilerProvider
+
+The main interface for interacting with the Java compiler:
+
+```java
+public interface CompilerProvider {
+    // Get all public top-level types
+    TreeSet<String> publicTopLevelTypes();
+    
+    // Find type declaration by fully qualified name
+    Path findTypeDeclaration(String className);
+    
+    // Parse a Java source file
+    ParseTask parse(Path file);
+    
+    // Compile source files
+    SynchronizedTask compile(CompilationRequest request);
+    
+    // Find references to a type or member
+    Path[] findTypeReferences(String className);
+    Path[] findMemberReferences(String className, String memberName);
+}
+```
+
+### JavaCompilerService
+
+The main implementation of `CompilerProvider`:
+
+```java
+// Create a compiler service for a module
+JavaCompilerService compiler = new JavaCompilerService(module);
+
+// Parse a file
+ParseTask task = compiler.parse(filePath);
+
+// Compile sources
+CompilationRequest request = new CompilationRequest(sources);
+SynchronizedTask result = compiler.compile(request);
+
+// Find type declaration
+Path declaration = compiler.findTypeDeclaration("com.example.MyClass");
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Kotlin Support" icon="code" href="/languages/kotlin">
+    Learn about Kotlin language features
+  </Card>
+  <Card title="XML Support" icon="file-code" href="/languages/xml">
+    Explore XML editing capabilities
+  </Card>
+  <Card title="Code Editor" icon="edit" href="/features/code-editor">
+    Understand editor features and shortcuts
+  </Card>
+  <Card title="Build System" icon="hammer" href="/features/gradle-build-system">
+    Configure build options and dependencies
+  </Card>
+</CardGroup>

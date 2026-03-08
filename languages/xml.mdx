@@ -1,0 +1,576 @@
+---
+title: XML Language Support
+description: Intelligent XML editing for Android layouts, manifests, and resource files with context-aware completion and formatting
+---
+
+Android Code Studio provides comprehensive XML language support specifically tailored for Android development, including smart completions for layouts, manifests, and resource files.
+
+## Language Server Features
+
+The XML Language Server (`XMLLanguageServer`) offers specialized support for Android XML files:
+
+<CardGroup cols={2}>
+  <Card title="Context-Aware Completion" icon="lightbulb">
+    Intelligent suggestions based on file type (layout, manifest, drawable, etc.)
+  </Card>
+  <Card title="Android Attributes" icon="android">
+    Complete android: namespace attributes with value suggestions
+  </Card>
+  <Card title="Resource References" icon="at">
+    Auto-complete @string, @drawable, @color, and other resource references
+  </Card>
+  <Card title="Code Formatting" icon="align-left">
+    Automatic XML formatting with configurable indentation and line breaks
+  </Card>
+</CardGroup>
+
+## File Type Support
+
+The XML LSP recognizes and provides specialized completion for different Android XML file types:
+
+### Layout Files
+
+Layout files in `res/layout/` receive specialized completion:
+
+<Tabs>
+  <Tab title="View Tags">
+    Completion for Android View classes and custom views:
+    
+    ```xml activity_main.xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        
+        <!-- Type 'Text' to complete TextView, EditText, etc. -->
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name" />
+        
+        <!-- Type 'Button' for Button completion -->
+        <Button
+            android:id="@+id/button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Click Me" />
+            
+    </LinearLayout>
+    ```
+  </Tab>
+  <Tab title="Attributes">
+    Context-aware attribute suggestions:
+    
+    ```xml
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        <!-- Type 'src' to complete android:src -->
+        android:src="@drawable/ic_launcher"
+        <!-- Type 'scale' to complete android:scaleType -->
+        android:scaleType="centerCrop"
+        <!-- Type 'content' to complete android:contentDescription -->
+        android:contentDescription="@string/image_description" />
+    ```
+  </Tab>
+  <Tab title="Resource Values">
+    Completion for resource references:
+    
+    ```xml
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        <!-- Type '@string/' for string resources -->
+        android:text="@string/hello_world"
+        <!-- Type '@color/' for color resources -->
+        android:textColor="@color/primary_text"
+        <!-- Type '@dimen/' for dimension resources -->
+        android:textSize="@dimen/text_size_medium"
+        <!-- Type '@style/' for style resources -->
+        style="@style/TextAppearance.Title" />
+    ```
+  </Tab>
+</Tabs>
+
+**Implementation:** Layout completion is handled by `LayoutTagCompletionProvider` and `LayoutAttrCompletionProvider` (source: `xml/lsp/src/main/java/com/tom/rv2ide/lsp/xml/providers/completion/layout/`)
+
+### AndroidManifest.xml
+
+Specialized completion for manifest elements:
+
+```xml AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.myapp">
+    
+    <!-- Type 'uses-' for permission declarations -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme">
+        
+        <!-- Type 'activity' for activity declaration -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <!-- Type 'action' for intent actions -->
+                <action android:name="android.intent.action.MAIN" />
+                <!-- Type 'category' for intent categories -->
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        
+        <!-- Type 'service' for service declaration -->
+        <service
+            android:name=".MyService"
+            android:enabled="true"
+            android:exported="false" />
+            
+    </application>
+    
+</manifest>
+```
+
+**Implementation:** Manifest completion uses `ManifestTagCompletionProvider`, `ManifestAttrCompletionProvider`, and `ManifestAttrValueCompletionProvider`
+
+### Drawable XML Files
+
+Completion for drawable resources (`res/drawable/`):
+
+<Tabs>
+  <Tab title="Shape Drawables">
+    ```xml button_background.xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <shape xmlns:android="http://schemas.android.com/apk/res/android"
+        android:shape="rectangle">
+        
+        <!-- Type 'solid' for solid color -->
+        <solid android:color="@color/primary" />
+        
+        <!-- Type 'corners' for rounded corners -->
+        <corners android:radius="8dp" />
+        
+        <!-- Type 'stroke' for border -->
+        <stroke
+            android:width="2dp"
+            android:color="@color/primary_dark" />
+            
+    </shape>
+    ```
+  </Tab>
+  <Tab title="Layer List">
+    ```xml shadow_drawable.xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+        
+        <!-- Shadow layer -->
+        <item
+            android:left="2dp"
+            android:top="2dp">
+            <shape android:shape="rectangle">
+                <solid android:color="#40000000" />
+                <corners android:radius="4dp" />
+            </shape>
+        </item>
+        
+        <!-- Main layer -->
+        <item>
+            <shape android:shape="rectangle">
+                <solid android:color="@android:color/white" />
+                <corners android:radius="4dp" />
+            </shape>
+        </item>
+        
+    </layer-list>
+    ```
+  </Tab>
+  <Tab title="Vector Drawables">
+    ```xml ic_heart.xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <vector xmlns:android="http://schemas.android.com/apk/res/android"
+        android:width="24dp"
+        android:height="24dp"
+        android:viewportWidth="24"
+        android:viewportHeight="24">
+        
+        <!-- Type 'path' for vector path -->
+        <path
+            android:fillColor="@color/accent"
+            android:pathData="M12,21.35l-1.45,-1.32C5.4,15.36 2,12.28 2,8.5 2,5.42 4.42,3 7.5,3c1.74,0 3.41,0.81 4.5,2.09C13.09,3.81 14.76,3 16.5,3 19.58,3 22,5.42 22,8.5c0,3.78 -3.4,6.86 -8.55,11.54L12,21.35z" />
+            
+    </vector>
+    ```
+  </Tab>
+</Tabs>
+
+**Implementation:** Drawable completion uses `DrawableTagTransformer` to provide context-specific suggestions
+
+### Animation Files
+
+Support for animation XML files:
+
+<Tabs>
+  <Tab title="View Animations">
+    ```xml fade_in.xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <set xmlns:android="http://schemas.android.com/apk/res/android">
+        
+        <!-- Type 'alpha' for alpha animation -->
+        <alpha
+            android:fromAlpha="0.0"
+            android:toAlpha="1.0"
+            android:duration="300" />
+            
+        <!-- Type 'scale' for scale animation -->
+        <scale
+            android:fromXScale="0.8"
+            android:toXScale="1.0"
+            android:fromYScale="0.8"
+            android:toYScale="1.0"
+            android:pivotX="50%"
+            android:pivotY="50%"
+            android:duration="300" />
+            
+    </set>
+    ```
+  </Tab>
+  <Tab title="Object Animators">
+    ```xml slide_up.xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <set xmlns:android="http://schemas.android.com/apk/res/android"
+        android:ordering="together">
+        
+        <!-- Type 'objectAnimator' -->
+        <objectAnimator
+            android:propertyName="translationY"
+            android:valueFrom="1000"
+            android:valueTo="0"
+            android:duration="500"
+            android:interpolator="@android:interpolator/decelerate_quad" />
+            
+    </set>
+    ```
+  </Tab>
+</Tabs>
+
+**Implementation:** Animation files use `AnimTagTransformer` and `AnimatorTagTransformer` for type-specific completion
+
+### Menu Files
+
+Completion for menu resources:
+
+```xml main_menu.xml
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    
+    <!-- Type 'item' for menu item -->
+    <item
+        android:id="@+id/action_search"
+        android:icon="@drawable/ic_search"
+        android:title="@string/action_search"
+        app:showAsAction="ifRoom" />
+        
+    <item
+        android:id="@+id/action_settings"
+        android:title="@string/action_settings"
+        app:showAsAction="never" />
+        
+</menu>
+```
+
+**Implementation:** Menu completion provided by `MenuTagTransformer`
+
+## Completion Providers
+
+The XML LSP uses a provider pattern for different completion contexts:
+
+### Tag Completion
+
+Provides suggestions for XML element names:
+
+- **LayoutTagCompletionProvider**: Android View classes
+- **ManifestTagCompletionProvider**: Manifest elements (activity, service, receiver, etc.)
+- **SimpleTagCompleter**: Simple tag name completion
+- **QualifiedTagCompleter**: Fully qualified class names
+
+### Attribute Completion
+
+Suggests available attributes for a given element:
+
+- **LayoutAttrCompletionProvider**: View attributes
+- **ManifestAttrCompletionProvider**: Manifest attributes
+- **CommonAttrCompletionProvider**: Common XML attributes
+- **InheritingAttrCompletionProvider**: Attributes inherited from parent tags
+
+### Attribute Value Completion
+
+Provides value suggestions for attributes:
+
+- **AttrValueCompletionProvider**: Resource references, enum values, booleans
+- **ManifestAttrValueCompletionProvider**: Manifest-specific values (permissions, features, etc.)
+
+## Code Formatting
+
+The XML formatter (`CodeFormatProvider`) provides automatic formatting:
+
+### Formatting Options
+
+```kotlin
+class XMLFormattingOptions {
+    var tabSize: Int = 4
+    var insertSpaces: Boolean = true
+    var splitAttributes: Boolean = false
+    var closingTagBracketOnNewLine: Boolean = false
+}
+```
+
+### Before and After Formatting
+
+<Tabs>
+  <Tab title="Before">
+    ```xml
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical"><TextView android:id="@+id/textView" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Hello" /></LinearLayout>
+    ```
+  </Tab>
+  <Tab title="After">
+    ```xml
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+        
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Hello" />
+            
+    </LinearLayout>
+    ```
+  </Tab>
+</Tabs>
+
+**Implementation:** The formatter uses multiple specialized classes:
+- `XMLFormatter`: Main formatting coordinator
+- `DOMElementFormatter`: Element formatting logic
+- `DOMAttributeFormatter`: Attribute alignment
+- `DOMTextFormatter`: Text content formatting
+
+## Advanced Editing Features
+
+### Auto-Close Tags
+
+The `AdvancedEditProvider` handles automatic tag closing:
+
+```xml
+<!-- Type '<TextView' and '>' -->
+<TextView>
+    <!-- Automatically inserts closing tag -->
+</TextView>
+```
+
+### Attribute Quotes
+
+Automatic quote insertion for attribute values:
+
+```xml
+<!-- Type 'android:text=' -->
+android:text=""
+<!-- Cursor positioned inside quotes -->
+```
+
+### Resource Reference Completion
+
+Type `@` to trigger resource reference completion:
+
+- `@string/` - String resources
+- `@drawable/` - Drawable resources
+- `@color/` - Color resources
+- `@dimen/` - Dimension resources
+- `@style/` - Style resources
+- `@id/` - View IDs
+- `@+id/` - Define new ID
+- `@android:` - Android framework resources
+
+## XML Parsing
+
+The XML LSP uses Eclipse LemMinX DOM parser for robust XML parsing:
+
+```kotlin
+val document = DOMParser.getInstance().parse(
+    contents,
+    "http://schemas.android.com/apk/res/android",
+    URIResolverExtensionManager()
+)
+```
+
+The parser provides:
+- **Error Recovery**: Continue parsing despite syntax errors
+- **Node Location**: Accurate position information for completions
+- **Namespace Support**: Handle android:, app:, and tools: namespaces
+
+## Node Type Detection
+
+The completion system detects context using `XmlUtils.getNodeType()`:
+
+```kotlin
+enum class NodeType {
+    TAG,              // Inside element name: <TextVi|w>
+    ATTRIBUTE,        // Inside attribute name: android:lay|
+    ATTRIBUTE_VALUE,  // Inside attribute value: android:text="|"
+    UNKNOWN          // Cannot determine context
+}
+```
+
+## Configuration
+
+### Server Settings
+
+```kotlin
+object XMLServerSettings : IServerSettings {
+    override fun completionsEnabled(): Boolean = true
+    override fun codeActionsEnabled(): Boolean = true
+}
+```
+
+### Custom Settings
+
+Apply custom settings to the XML server:
+
+```kotlin
+val customSettings = object : IServerSettings {
+    override fun completionsEnabled() = true
+    override fun codeActionsEnabled() = false
+}
+
+xmlServer.applySettings(customSettings)
+```
+
+## Performance
+
+### Caching
+
+The XML LSP caches parsed documents to improve performance:
+
+- **Parse Cache**: Stores DOM trees for recently accessed files
+- **Resource Cache**: Caches available resources from R class
+- **Attribute Cache**: Stores attribute definitions for view types
+
+### Prefix Matching
+
+Completion is triggered only when a meaningful prefix is typed:
+
+```kotlin
+val prefix = XmlUtils.getPrefix(document, cursorPosition, nodeType)
+if (prefix.isBlank() && type != ATTRIBUTE_VALUE) {
+    return EMPTY  // Don't show completions
+}
+```
+
+## Limitations
+
+<Warning>
+  Current limitations of the XML language server:
+  
+  - **Custom View Attributes**: Attributes from custom views may not be suggested unless properly documented
+  - **Data Binding**: Limited completion for data binding expressions inside `@{}`
+  - **Constraint Layout**: Some ConstraintLayout-specific attributes may have incomplete suggestions
+  - **Multi-module Resources**: Resources from library modules may not always be available
+</Warning>
+
+## Troubleshooting
+
+### Completion Not Working
+
+If XML completion stops working:
+
+1. Check the file is in a recognized directory (`res/layout/`, `res/drawable/`, etc.)
+2. Ensure the XML file has a valid XML declaration
+3. Verify the namespace declarations are correct
+4. Check that the project has been synced
+
+### Formatting Issues
+
+If formatting produces unexpected results:
+
+1. Check for unclosed tags in the XML
+2. Verify the XML is well-formed (balanced tags)
+3. Adjust formatting options in settings
+
+### Resource References Not Completing
+
+If `@string/` and other resource references don't complete:
+
+1. Ensure resources are defined in appropriate XML files
+2. Check that the R class has been generated (build the project)
+3. Verify the module dependencies include the resources
+
+## API Reference
+
+### XMLLanguageServer
+
+Main server interface:
+
+```kotlin
+class XMLLanguageServer : ILanguageServer {
+    override val serverId: String = "ide.lsp.xml"
+    
+    override fun complete(params: CompletionParams?): CompletionResult
+    override fun formatCode(params: FormatCodeParams?): CodeFormatResult
+    override suspend fun analyze(file: Path): DiagnosticResult
+}
+```
+
+### XmlCompletionProvider
+
+Completion implementation:
+
+```kotlin
+class XmlCompletionProvider(settings: IServerSettings) : ICompletionProvider {
+    override fun complete(params: CompletionParams): CompletionResult {
+        val document = DOMParser.getInstance().parse(contents, ...)
+        val type = XmlUtils.getNodeType(document, cursorPosition)
+        val completer = getCompleter(pathData, type)
+        return completer.complete(params, pathData, document, type, prefix)
+    }
+}
+```
+
+### CodeFormatProvider
+
+Formatting implementation:
+
+```kotlin
+class CodeFormatProvider {
+    fun format(params: FormatCodeParams?): CodeFormatResult {
+        val formatter = XMLFormatter()
+        val edits = formatter.format(document, options)
+        return CodeFormatResult(isFormatted = true, edits = edits)
+    }
+}
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Java Support" icon="code" href="/languages/java">
+    Learn about Java language features
+  </Card>
+  <Card title="Kotlin Support" icon="code" href="/languages/kotlin">
+    Explore Kotlin language capabilities
+  </Card>
+  <Card title="Project Management" icon="folder-open" href="/features/project-management">
+    Manage Android resources and projects
+  </Card>
+  <Card title="UI Designer" icon="palette" href="/features/ui-designer">
+    Visual layout editor
+  </Card>
+</CardGroup>

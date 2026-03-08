@@ -1,0 +1,379 @@
+---
+title: Creating Projects
+description: Learn how to create new Android projects in Android Code Studio
+icon: folder-plus
+---
+
+Android Code Studio provides a powerful project wizard that helps you create fully configured Android projects directly on your device.
+
+## Using the Project Wizard
+
+The Project Wizard (ATC Wizard) guides you through creating a new Android project with various templates and configurations.
+
+<Steps>
+  <Step title="Open the Project Wizard">
+    From the main screen, tap the **Create Project** button or select **File → New Project** from the menu.
+  </Step>
+
+  <Step title="Choose a Template">
+    Select from available project templates:
+    
+    - **Empty Activity** - Basic activity with a simple layout
+    - **Basic Activity** - Activity with app bar and floating action button
+    - **Bottom Navigation Activity** - App with bottom navigation
+    - **Navigation Drawer Activity** - App with navigation drawer
+    - **Tabbed Activity** - Activity with tabs
+    - **Compose Activity** - Modern Jetpack Compose UI
+    - **Native C++** - Project with C++ native code support
+    - **Game Activity** - Android game development template
+    - **No Activity** - Empty project without activities
+
+    <Tip>
+      For Compose projects, the language is automatically set to Kotlin as Compose requires Kotlin.
+    </Tip>
+  </Step>
+
+  <Step title="Configure Project Settings">
+    After selecting a template, configure your project:
+
+    ### Basic Information
+    - **Project Name** - Must start with a letter and contain only letters, numbers, and underscores
+    - **Package Name** - Your app's unique identifier (e.g., `com.example.myapp`)
+    - **Save Location** - Where to create the project
+
+    ### Build Configuration
+    - **Language** - Choose Java or Kotlin
+    - **Minimum SDK** - Minimum Android version your app supports (API 21+ recommended)
+    - **Use Kotlin DSL** - Enable to use `build.gradle.kts` instead of `build.gradle`
+
+    <Note>
+      The package name automatically updates based on your project name but can be customized.
+    </Note>
+  </Step>
+
+  <Step title="Advanced Options (Optional)">
+    For native development:
+
+    - **Use CMake** - Enable for CMake build system (requires CMake installation)
+    - **Native Language** - Choose C or C++
+    - **NDK Version** - Select from installed NDK versions
+
+    <Warning>
+      Native C++ projects require an NDK installation. Install it from **Settings → IDE Configuration → SDK Manager**.
+    </Warning>
+  </Step>
+
+  <Step title="Create the Project">
+    Tap **Create** to generate your project. The IDE will:
+    
+    1. Create the project structure
+    2. Generate source files based on your template
+    3. Set up Gradle build scripts
+    4. Configure dependencies
+    5. Initialize version control (git)
+  </Step>
+</Steps>
+
+## Project Structure
+
+After creation, your project will have this structure:
+
+```
+MyProject/
+├── app/
+│   ├── src/
+│   │   ├── main/
+│   │   │   ├── java/           # Java/Kotlin source files
+│   │   │   ├── res/            # Resources (layouts, strings, etc.)
+│   │   │   └── AndroidManifest.xml
+│   │   ├── test/               # Unit tests
+│   │   └── androidTest/        # Instrumented tests
+│   └── build.gradle[.kts]      # Module build configuration
+├── gradle/
+│   └── wrapper/
+│       ├── gradle-wrapper.jar
+│       └── gradle-wrapper.properties
+├── build.gradle[.kts]          # Root build configuration
+├── settings.gradle[.kts]       # Project settings
+├── gradle.properties           # Gradle properties
+└── gradlew                     # Gradle wrapper script
+```
+
+## Template Details
+
+### Empty Activity
+
+Creates a minimal activity with a simple layout:
+
+```kotlin title="MainActivity.kt"
+package com.example.myapp
+
+import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+    }
+}
+```
+
+### Compose Activity
+
+Creates a modern Jetpack Compose application:
+
+```kotlin title="MainActivity.kt"
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MyAppTheme {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    Greeting("Android")
+                }
+            }
+        }
+    }
+}
+```
+
+### Native C++ Project
+
+Includes JNI configuration and native library setup:
+
+```kotlin title="MainActivity.kt"
+class MainActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+        
+        // Example native method call
+        findViewById<TextView>(R.id.sample_text).text = stringFromJNI()
+    }
+    
+    external fun stringFromJNI(): String
+    
+    companion object {
+        init {
+            System.loadLibrary("native-lib")
+        }
+    }
+}
+```
+
+## Configuration Files
+
+The IDE generates properly configured files for your project.
+
+### Root build.gradle.kts
+
+```kotlin title="build.gradle.kts"
+plugins {
+    id("com.android.application") version "8.2.0" apply false
+    id("org.jetbrains.kotlin.android") version "1.9.20" apply false
+}
+```
+
+### Module build.gradle.kts
+
+```kotlin title="app/build.gradle.kts"
+plugins {
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+}
+
+android {
+    namespace = "com.example.myapp"
+    compileSdk = 34
+    
+    defaultConfig {
+        applicationId = "com.example.myapp"
+        minSdk = 21
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+    }
+    
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+    
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+}
+```
+
+### gradle.properties
+
+```properties title="gradle.properties"
+org.gradle.jvmargs=-Xmx512m -Dfile.encoding=UTF-8
+android.useAndroidX=true
+kotlin.code.style=official
+android.nonTransitiveRClass=true
+```
+
+## Opening Existing Projects
+
+<Tabs>
+  <Tab title="From Local Storage">
+    1. Tap **Open Project** on the main screen
+    2. Navigate to your project folder
+    3. Select the project root directory (containing `build.gradle`)
+    4. Tap **Open**
+  </Tab>
+
+  <Tab title="From Recent Projects">
+    Recent projects appear on the main screen for quick access.
+    Simply tap a recent project to open it.
+  </Tab>
+
+  <Tab title="From Git Clone">
+    1. Open the Terminal
+    2. Navigate to your projects directory:
+       ```bash
+       cd ~/AndroidIDEProjects
+       ```
+    3. Clone the repository:
+       ```bash
+       git clone https://github.com/username/repository.git
+       ```
+    4. Open the cloned project from the main screen
+  </Tab>
+</Tabs>
+
+## Project Initialization
+
+When you open a project, Android Code Studio:
+
+<Steps>
+  <Step title="Validates Project Structure">
+    Checks for required files:
+    - `build.gradle` or `build.gradle.kts`
+    - `settings.gradle` or `settings.gradle.kts`
+    - `gradlew` wrapper
+  </Step>
+
+  <Step title="Installs Gradle Wrapper (if needed)">
+    If the Gradle wrapper is missing, the IDE automatically installs it:
+    
+    ```
+    -------------------- NOTE --------------------
+    Gradle wrapper not found. Installing...
+    ----------------------------------------------
+    ```
+  </Step>
+
+  <Step title="Initializes the Project">
+    Runs Gradle sync to:
+    - Download dependencies
+    - Index source files
+    - Parse build configurations
+    - Set up language servers
+  </Step>
+
+  <Step title="Indexes Resources">
+    Reads and caches:
+    - Android resources (layouts, strings, drawables)
+    - Java/Kotlin source files
+    - Dependencies and classpaths
+  </Step>
+</Steps>
+
+<Note>
+  Initial project initialization may take a few minutes depending on project size and dependencies.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Project Already Exists Error">
+    If you see "A project with this name already exists", either:
+    - Choose a different project name
+    - Select a different save location
+    - Delete the existing project if no longer needed
+  </Accordion>
+
+  <Accordion title="NDK Not Found (Native Projects)">
+    Native C++ projects require an NDK:
+    
+    1. Go to **Settings → IDE Configuration**
+    2. Tap **SDK Manager**
+    3. In Terminal, install NDK:
+       ```bash
+       sdkmanager "ndk;25.2.9519653"
+       ```
+    4. Return to the project wizard and retry
+  </Accordion>
+
+  <Accordion title="CMake Validation Failed">
+    If CMake is not found:
+    
+    1. Go to **Settings → IDE Configuration**
+    2. Install CMake via Terminal:
+       ```bash
+       sdkmanager "cmake;3.22.1"
+       ```
+    3. Restart the IDE and try again
+  </Accordion>
+
+  <Accordion title="Game Activity Must Use ACS Home">
+    Game Activity projects have special requirements:
+    
+    - Must be saved in the Android Code Studio home directory
+    - Tap **Automatically switch** in the dialog to fix
+    - Or manually set save location to the suggested path
+  </Accordion>
+
+  <Accordion title="Gradle Sync Failed">
+    If project initialization fails:
+    
+    1. Check your internet connection (for dependency downloads)
+    2. Ensure you have enough storage space
+    3. Try **File → Sync Project with Gradle Files**
+    4. Check the Build Output for specific errors
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Choose Appropriate SDK" icon="mobile">
+    Select the minimum SDK based on your target audience. API 21+ covers 99%+ of devices.
+  </Card>
+
+  <Card title="Use Kotlin DSL" icon="code">
+    Enable Kotlin DSL for better IDE support, type safety, and modern syntax in build scripts.
+  </Card>
+
+  <Card title="Follow Naming Conventions" icon="pen">
+    Use PascalCase for project names and reverse domain notation for package names.
+  </Card>
+
+  <Card title="Enable Version Control" icon="code-branch">
+    Projects are automatically git-initialized. Commit early and often.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+After creating your project:
+
+- [Build your app](/guides/building-apps) to generate APKs
+- [Use the AI Agent](/guides/using-ai-agent) for coding assistance
+- [Configure environment variables](/guides/environment-variables) for custom build settings
+- [Debug your application](/guides/debugging) to troubleshoot issues

@@ -1,0 +1,554 @@
+---
+title: 'Gradle Build System'
+description: 'Complete Gradle integration with Tooling API for building Android projects'
+icon: 'gears'
+---
+
+## Overview
+
+Android Code Studio provides comprehensive Gradle build system integration through the Gradle Tooling API, enabling full project initialization, task execution, and build management directly on Android devices.
+
+## Build Service
+
+The `BuildService` interface is the primary entry point for all build operations:
+
+```kotlin
+interface BuildService {
+  companion object {
+    @JvmField val KEY_BUILD_SERVICE = Key<BuildService>()
+    @JvmField val KEY_PROJECT_PROXY = Key<IProject>()
+  }
+  
+  // Build status
+  val isBuildInProgress: Boolean
+  
+  // Server management
+  fun isToolingServerStarted(): Boolean
+  fun metadata(): CompletableFuture<ToolingServerMetadata>
+  
+  // Project operations
+  fun initializeProject(
+    params: InitializeProjectParams
+  ): CompletableFuture<InitializeResult>
+  
+  // Task execution
+  fun executeTasks(
+    vararg tasks: String
+  ): CompletableFuture<TaskExecutionResult>
+  
+  // Build control
+  fun cancelCurrentBuild(): CompletableFuture<BuildCancellationRequestResult>
+}
+```
+
+## Getting Started
+
+### Accessing the Build Service
+
+```kotlin
+import com.tom.rv2ide.lookup.Lookup
+import com.tom.rv2ide.projects.builder.BuildService
+
+// Get build service from lookup
+val buildService = Lookup.getDefault()
+  .lookup(BuildService.KEY_BUILD_SERVICE)
+  ?: throw IllegalStateException("Build service not available")
+```
+
+<Note>
+  The BuildService is registered in the Lookup during IDE initialization and
+  remains available throughout the application lifecycle.
+</Note>
+
+## Project Initialization
+
+Initialize a Gradle project before performing any build operations:
+
+<Tabs>
+  <Tab title="Basic Init">
+    ```kotlin
+    val params = InitializeProjectParams(
+      projectDir = File("/storage/emulated/0/AndroidProjects/MyApp")
+    )
+    
+    buildService.initializeProject(params)
+      .thenAccept { result ->
+        if (result.success) {
+          println("Project initialized successfully")
+          println("Gradle version: ${result.gradleVersion}")
+          
+          // Access project model
+          val project = Lookup.getDefault()
+            .lookup(BuildService.KEY_PROJECT_PROXY)
+        } else {
+          println("Initialization failed: ${result.error}")
+        }
+      }
+      .exceptionally { throwable ->
+        println("Exception during init: ${throwable.message}")
+        null
+      }
+    ```
+  </Tab>
+  <Tab title="With Options">
+    ```kotlin
+    val params = InitializeProjectParams(
+      projectDir = projectDir,
+      gradleInstallation = gradleHome,
+      gradleUserHome = gradleUserHome,
+      javaHome = javaHome,
+      options = listOf(
+        "--stacktrace",
+        "--info"
+      ),
+      environmentVariables = mapOf(
+        "ANDROID_HOME" to androidSdkPath
+      )
+    )
+    
+    buildService.initializeProject(params)
+      .thenAccept { result ->
+        // Handle result
+      }
+    ```
+  </Tab>
+</Tabs>
+
+## Task Execution
+
+### Running Gradle Tasks
+
+Execute Gradle tasks asynchronously:
+
+```kotlin
+// Single task
+buildService.executeTasks("assembleDebug")
+  .thenAccept { result ->
+    println("Build successful: ${result.isSuccessful}")
+    
+    // Check executed tasks
+    result.tasks.forEach { task ->
+      println("${task.path}: ${task.result}")
+    }
+  }
+
+// Multiple tasks
+buildService.executeTasks("clean", "assembleDebug")
+  .thenAccept { result ->
+    // Handle result
+  }
+
+// Module-specific task
+buildService.executeTasks(":app:assembleDebug")
+  .thenAccept { result ->
+    // Handle result
+  }
+```
+
+### Common Build Tasks
+
+<CardGroup cols={2}>
+  <Card title="assemble" icon="box">
+    Build the project output (APK/AAR)
+  </Card>
+  <Card title="clean" icon="broom">
+    Delete build outputs and clean project
+  </Card>
+  <Card title="build" icon="hammer">
+    Assemble and run tests
+  </Card>
+  <Card title="test" icon="vial">
+    Run unit tests
+  </Card>
+  <Card title="lint" icon="magnifying-glass">
+    Run Android lint checks
+  </Card>
+  <Card title="dependencies" icon="diagram-project">
+    Display project dependencies
+  </Card>
+</CardGroup>
+
+### Build Variants
+
+<Accordion title="Android Build Variants">
+  Android projects support different build variants:
+  
+  ```kotlin
+  // Debug variant
+  buildService.executeTasks("assembleDebug")
+  
+  // Release variant
+  buildService.executeTasks("assembleRelease")
+  
+  // Flavor-specific
+  buildService.executeTasks("assembleFreeDebug")
+  buildService.executeTasks("assembleProRelease")
+  
+  // Module-specific variant
+  buildService.executeTasks(":app:assembleDebug")
+  ```
+</Accordion>
+
+## Build Results
+
+The `TaskExecutionResult` provides detailed information about the build:
+
+```kotlin
+data class TaskExecutionResult(
+  val isSuccessful: Boolean,
+  val tasks: List<TaskExecutionInfo>,
+  val failures: List<BuildFailure>,
+  val output: String
+)
+
+data class TaskExecutionInfo(
+  val path: String,
+  val result: TaskResult,
+  val executionTime: Long
+)
+
+enum class TaskResult {
+  SUCCESS,
+  FAILED,
+  UP_TO_DATE,
+  FROM_CACHE,
+  SKIPPED
+}
+```
+
+### Processing Build Results
+
+```kotlin
+buildService.executeTasks("assembleDebug")
+  .thenAccept { result ->
+    if (result.isSuccessful) {
+      // Build succeeded
+      val upToDateTasks = result.tasks.count { 
+        it.result == TaskResult.UP_TO_DATE 
+      }
+      val executedTasks = result.tasks.count { 
+        it.result == TaskResult.SUCCESS 
+      }
+      
+      println("Executed: $executedTasks, Up-to-date: $upToDateTasks")
+      
+      // Find output APK
+      val apkPath = findApkOutput(result)
+    } else {
+      // Build failed
+      result.failures.forEach { failure ->
+        println("Failure: ${failure.message}")
+        println("Location: ${failure.location}")
+        failure.stacktrace?.let { println(it) }
+      }
+    }
+    
+    // Always available: full build output
+    println(result.output)
+  }
+```
+
+## Build Cancellation
+
+Cancel long-running builds:
+
+```kotlin
+// Check if build is running
+if (buildService.isBuildInProgress) {
+  // Cancel the build
+  buildService.cancelCurrentBuild()
+    .thenAccept { result ->
+      if (result.success) {
+        println("Build cancelled successfully")
+      } else {
+        println("Failed to cancel build: ${result.message}")
+      }
+    }
+}
+```
+
+<Warning>
+  Build cancellation is a best-effort operation. Some build operations may not
+  be immediately cancellable.
+</Warning>
+
+## Tooling Server
+
+### Server Status
+
+Check Tooling API server status:
+
+```kotlin
+// Check if server is running
+if (buildService.isToolingServerStarted()) {
+  // Server is ready for build operations
+  
+  // Get server metadata
+  buildService.metadata()
+    .thenAccept { metadata ->
+      println("Server version: ${metadata.version}")
+      println("Gradle version: ${metadata.gradleVersion}")
+      println("Server capabilities: ${metadata.capabilities}")
+    }
+} else {
+  // Server needs to be started
+  println("Tooling server not started")
+}
+```
+
+### Server Metadata
+
+```kotlin
+data class ToolingServerMetadata(
+  val version: String,
+  val gradleVersion: String,
+  val capabilities: List<String>,
+  val supportedFeatures: Set<String>
+)
+```
+
+## Gradle File Parsing
+
+Android Code Studio includes utilities for parsing Gradle build files:
+
+```kotlin
+class GradleFileParser {
+  fun parseBuildScript(file: File): BuildScript
+  fun extractDependencies(file: File): List<Dependency>
+  fun extractPlugins(file: File): List<Plugin>
+}
+
+data class BuildScript(
+  val plugins: List<Plugin>,
+  val dependencies: List<Dependency>,
+  val android: AndroidConfig?,
+  val properties: Map<String, String>
+)
+```
+
+### Parsing Build Files
+
+<Tabs>
+  <Tab title="Parse Dependencies">
+    ```kotlin
+    val parser = GradleFileParser()
+    val buildFile = File(projectDir, "app/build.gradle")
+    
+    val dependencies = parser.extractDependencies(buildFile)
+    dependencies.forEach { dep ->
+      println("${dep.configuration}: ${dep.notation}")
+    }
+    ```
+  </Tab>
+  <Tab title="Parse Plugins">
+    ```kotlin
+    val parser = GradleFileParser()
+    val buildFile = File(projectDir, "app/build.gradle.kts")
+    
+    val plugins = parser.extractPlugins(buildFile)
+    plugins.forEach { plugin ->
+      println("Plugin: ${plugin.id}, Version: ${plugin.version}")
+    }
+    ```
+  </Tab>
+  <Tab title="Parse Android Config">
+    ```kotlin
+    val parser = GradleFileParser()
+    val buildScript = parser.parseBuildScript(buildFile)
+    
+    buildScript.android?.let { config ->
+      println("Compile SDK: ${config.compileSdk}")
+      println("Min SDK: ${config.minSdk}")
+      println("Target SDK: ${config.targetSdk}")
+      println("Namespace: ${config.namespace}")
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Build Events
+
+Listen to build events for progress tracking:
+
+```kotlin
+interface BuildEventListener {
+  fun onBuildStarted()
+  fun onTaskStarted(taskPath: String)
+  fun onTaskFinished(taskPath: String, result: TaskResult)
+  fun onBuildFinished(result: TaskExecutionResult)
+  fun onBuildFailed(failures: List<BuildFailure>)
+}
+
+// Register listener
+buildService.registerEventListener(listener)
+```
+
+## Advanced Features
+
+### Custom Gradle Arguments
+
+```kotlin
+// Execute with custom Gradle arguments
+val params = InitializeProjectParams(
+  projectDir = projectDir,
+  options = listOf(
+    "--parallel",
+    "--build-cache",
+    "--offline",
+    "-Dorg.gradle.jvmargs=-Xmx2g"
+  )
+)
+
+buildService.initializeProject(params)
+```
+
+### Environment Variables
+
+```kotlin
+val params = InitializeProjectParams(
+  projectDir = projectDir,
+  environmentVariables = mapOf(
+    "ANDROID_HOME" to "/data/data/com.tom.rv2ide/files/android-sdk",
+    "JAVA_HOME" to "/data/data/com.tom.rv2ide/files/jdk",
+    "GRADLE_USER_HOME" to gradleUserHome
+  )
+)
+```
+
+### Project Properties
+
+```kotlin
+// Pass project properties
+val params = InitializeProjectParams(
+  projectDir = projectDir,
+  projectProperties = mapOf(
+    "android.useAndroidX" to "true",
+    "android.enableJetifier" to "false"
+  )
+)
+```
+
+<Accordion title="Performance Optimization">
+  Optimize build performance with these settings:
+  
+  - **Parallel Execution**: `--parallel`
+  - **Build Cache**: `--build-cache`
+  - **Configuration Cache**: `--configuration-cache`
+  - **Daemon**: Gradle daemon runs by default
+  - **Incremental Builds**: Enabled automatically
+</Accordion>
+
+## Error Handling
+
+### Build Failures
+
+```kotlin
+buildService.executeTasks("assembleDebug")
+  .thenAccept { result ->
+    if (!result.isSuccessful) {
+      result.failures.forEach { failure ->
+        when (failure.type) {
+          FailureType.COMPILATION_ERROR -> {
+            // Handle compilation errors
+            println("Compilation error: ${failure.message}")
+            failure.location?.let { loc ->
+              println("File: ${loc.file}:${loc.line}")
+            }
+          }
+          FailureType.TASK_EXECUTION_FAILURE -> {
+            // Handle task execution failures
+            println("Task failed: ${failure.task}")
+          }
+          FailureType.DEPENDENCY_RESOLUTION -> {
+            // Handle dependency issues
+            println("Dependency error: ${failure.message}")
+          }
+          else -> {
+            println("Build error: ${failure.message}")
+          }
+        }
+      }
+    }
+  }
+  .exceptionally { throwable ->
+    // Handle exceptions
+    when (throwable) {
+      is BuildCancelledException -> 
+        println("Build was cancelled")
+      is GradleConnectionException -> 
+        println("Failed to connect to Gradle")
+      else -> 
+        println("Build exception: ${throwable.message}")
+    }
+    null
+  }
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Initialize First" icon="play">
+    Always initialize the project before executing tasks
+  </Card>
+  <Card title="Handle Async" icon="clock">
+    Use CompletableFuture callbacks for async operations
+  </Card>
+  <Card title="Check Status" icon="circle-check">
+    Verify build status before starting new builds
+  </Card>
+  <Card title="Cancel on Exit" icon="ban">
+    Cancel running builds when leaving the build screen
+  </Card>
+</CardGroup>
+
+## Integration Examples
+
+### Build and Install
+
+```kotlin
+suspend fun buildAndInstall() {
+  try {
+    // Execute build task
+    val result = buildService.executeTasks("installDebug").await()
+    
+    if (result.isSuccessful) {
+      // APK installed successfully
+      showNotification("App installed successfully")
+    } else {
+      // Show build errors
+      showBuildErrors(result.failures)
+    }
+  } catch (e: Exception) {
+    showError("Build failed: ${e.message}")
+  }
+}
+```
+
+### Incremental Build
+
+```kotlin
+// Check for changes and build
+if (hasUnsavedFiles()) {
+  saveAllFiles()
+}
+
+// Execute incremental build
+buildService.executeTasks("assembleDebug")
+  .thenAccept { result ->
+    val upToDate = result.tasks.count { 
+      it.result == TaskResult.UP_TO_DATE 
+    }
+    println("$upToDate tasks were up-to-date")
+  }
+```
+
+<Tip>
+  Use Gradle's incremental build capabilities by avoiding clean builds when
+  possible. This significantly speeds up build times.
+</Tip>
+
+## Related Features
+
+- [Project Management](/features/project-management) - Project structure and workspace
+- [Language Servers](/features/language-servers) - Code analysis and diagnostics
+- [Code Editor](/features/code-editor) - Source code editing

@@ -1,0 +1,271 @@
+---
+title: Terminal
+description: Use the integrated terminal to run commands, scripts, and shell sessions
+icon: terminal
+---
+
+Android Code Studio includes a full-featured terminal emulator based on Termux, providing a complete Linux-like command-line environment directly on your Android device.
+
+## Overview
+
+The terminal tool gives you access to:
+
+- Full bash shell environment
+- Package management for installing development tools
+- Multiple terminal sessions
+- Customizable keyboard shortcuts
+- Integration with the IDE workspace
+
+## Opening the Terminal
+
+Access the terminal from the navigation menu or bottom navigation bar in the IDE.
+
+## Features
+
+### Multiple Sessions
+
+Create and manage multiple terminal sessions simultaneously:
+
+<Steps>
+  <Step title="Open Terminal">
+    Tap the terminal icon in the navigation bar
+  </Step>
+  
+  <Step title="Create New Session">
+    Tap the `+` button or "New Session" to create additional terminal sessions
+  </Step>
+  
+  <Step title="Switch Sessions">
+    Swipe left/right or use the session drawer to switch between active sessions
+  </Step>
+</Steps>
+
+<Note>
+The number of sessions you can create depends on your device's memory and performance.
+</Note>
+
+### Extra Keys Row
+
+The terminal includes a customizable extra keys row above the keyboard with commonly used keys:
+
+- **ESC** - Escape key
+- **CTRL** - Control modifier
+- **ALT** - Alt modifier  
+- **TAB** - Tab key for completion
+- **Arrow keys** - Navigate command history and text
+- **Special characters** - Quick access to `|`, `&`, `;`, etc.
+
+### Session Management
+
+<CodeGroup>
+```bash Creating a Named Session
+# Sessions are automatically named, but you can rename them
+# Long-press on a session tab to rename
+```
+
+```bash Session Working Directory
+# Each session starts in your home directory by default
+cd ~/projects/MyApp
+# The working directory persists for the session
+```
+</CodeGroup>
+
+## Common Commands
+
+### Package Management
+
+The terminal uses the pkg package manager:
+
+<CodeGroup>
+```bash Install Packages
+pkg install git
+pkg install python
+pkg install nodejs
+```
+
+```bash Update Packages
+pkg update
+pkg upgrade
+```
+
+```bash Search Packages
+pkg search <package-name>
+```
+
+```bash List Installed
+pkg list-installed
+```
+</CodeGroup>
+
+### Development Workflows
+
+<CodeGroup>
+```bash Build Projects
+# Navigate to project directory
+cd ~/projects/MyApp
+
+# Run Gradle build
+./gradlew build
+```
+
+```bash Run Scripts
+# Execute shell scripts
+bash deploy.sh
+
+# Python scripts
+python script.py
+```
+
+```bash Git Operations
+git status
+git add .
+git commit -m "Update feature"
+git push origin main
+```
+</CodeGroup>
+
+## Keyboard Shortcuts
+
+The terminal supports various keyboard shortcuts when using an external keyboard:
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl + C` | Interrupt current process |
+| `Ctrl + D` | Exit shell / End of input |
+| `Ctrl + Z` | Suspend current process |
+| `Ctrl + L` | Clear screen |
+| `Ctrl + A` | Move cursor to line start |
+| `Ctrl + E` | Move cursor to line end |
+| `Ctrl + K` | Delete from cursor to end of line |
+| `Ctrl + U` | Delete from cursor to start of line |
+| `Up/Down Arrow` | Navigate command history |
+
+## Environment Variables
+
+The terminal provides access to IDE-specific environment variables:
+
+```bash Environment Info
+echo $HOME          # User home directory
+echo $PREFIX        # Termux prefix directory
+echo $PATH          # Executable search paths
+echo $TMPDIR        # Temporary directory
+```
+
+<Tip>
+The IDE automatically sets up environment variables for the Android SDK and build tools.
+</Tip>
+
+## Integration with IDE
+
+### Project Context
+
+When opened from a project, the terminal automatically sets the working directory to your project root:
+
+```bash
+# Terminal opens in project directory
+pwd
+# Output: /data/data/com.tom.rv2ide/files/home/projects/MyApp
+```
+
+### IDE Setup Scripts
+
+The terminal can run IDE setup scripts for initial configuration:
+
+```bash Running IDE Setup
+# The IDE may prompt to run idesetup on first launch
+# This configures the development environment
+```
+
+## Troubleshooting
+
+### Terminal Won't Start
+
+<Steps>
+  <Step title="Check Permissions">
+    Ensure the app has storage permissions enabled in system settings
+  </Step>
+  
+  <Step title="Clear App Data">
+    If persistent issues occur, try clearing app data (Settings > Apps > Android Code Studio > Clear Data)
+  </Step>
+  
+  <Step title="Reinstall">
+    As a last resort, reinstall the application
+  </Step>
+</Steps>
+
+### Command Not Found
+
+<Warning>
+Make sure packages are installed using `pkg install <package>` before trying to use them.
+</Warning>
+
+```bash Fix Missing Commands
+# Update package repositories
+pkg update
+
+# Install the required package
+pkg install <package-name>
+```
+
+### Session Limit Reached
+
+If you can't create new sessions:
+
+- Close unused sessions by swiping them away
+- Check your device's available memory
+- Restart the terminal activity
+
+### Text Display Issues
+
+If text appears garbled or incorrectly rendered:
+
+```bash Reset Terminal
+# Clear the screen
+clear
+
+# Reset terminal settings
+reset
+```
+
+## Advanced Usage
+
+### Custom Startup Scripts
+
+Create custom startup scripts in your home directory:
+
+```bash ~/.bashrc
+# Add custom aliases
+alias ll='ls -la'
+alias gs='git status'
+
+# Set custom environment variables
+export EDITOR=nano
+
+# Custom prompt
+export PS1='\[\033[01;32m\]\u@AndroidIDE\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+```
+
+### Background Processes
+
+Run long-running commands in the background:
+
+```bash Background Jobs
+# Run in background
+./gradlew build &
+
+# Check running jobs
+jobs
+
+# Bring to foreground
+fg %1
+```
+
+## Best Practices
+
+<Tip>
+- **Name your sessions** - Use descriptive names for sessions working on different tasks
+- **Close unused sessions** - Free up memory by closing sessions you're not using
+- **Use history** - Navigate command history with up/down arrows to reuse commands
+- **Enable autocomplete** - Use TAB key for command and path completion
+</Tip>

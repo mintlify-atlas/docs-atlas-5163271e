@@ -1,122 +1,133 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "Android Code Studio",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#242b2c",
+    "light": "#040404",
+    "dark": "#6a6a6d"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "https://media.brand.dev/830be1a5-75c8-4ecb-b313-f442190db4e4.png",
+  "logo": {
+    "light": "https://media.brand.dev/2cf77928-82c6-4050-921b-e06e14b92fea.svg",
+    "dark": "https://media.brand.dev/2cf77928-82c6-4050-921b-e06e14b92fea.svg"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/AndroidCSOfficial/android-code-studio"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/AndroidCSOfficial/android-code-studio"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Get Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Features",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "features/code-editor",
+              "features/project-management",
+              "features/gradle-build-system",
+              "features/language-servers",
+              "features/ui-designer",
+              "features/ai-agent"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Development Tools",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
+              "tools/terminal",
+              "tools/sdk-manager",
+              "tools/git-integration",
+              "tools/asset-studio",
+              "tools/log-reader"
             ]
           },
           {
-            "group": "AI tools",
+            "group": "Guides",
             "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "guides/creating-projects",
+              "guides/building-apps",
+              "guides/debugging",
+              "guides/using-ai-agent",
+              "guides/environment-variables",
+              "guides/plugins"
+            ]
+          },
+          {
+            "group": "Language Support",
+            "pages": [
+              "languages/java",
+              "languages/kotlin",
+              "languages/xml"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/preferences",
+              "configuration/jdk-setup",
+              "configuration/sdk-ndk"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Overview",
             "pages": [
-              "api-reference/introduction"
+              "api/overview",
+              "api/architecture"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Core APIs",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/editor-api",
+              "api/project-api",
+              "api/lsp-api",
+              "api/tooling-api"
+            ]
+          },
+          {
+            "group": "Extension Development",
+            "pages": [
+              "api/plugin-development",
+              "api/template-api",
+              "api/action-system"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Community",
+        "groups": [
+          {
+            "group": "Resources",
+            "pages": [
+              "community/contributing",
+              "community/support",
+              "community/faq"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

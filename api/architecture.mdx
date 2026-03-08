@@ -1,0 +1,279 @@
+---
+title: Architecture Overview
+description: Understanding Android Code Studio's modular architecture
+---
+
+Android Code Studio is built on a modular, extensible architecture that separates concerns and enables plugin development.
+
+## Core Components
+
+### Editor Layer
+
+The editor layer provides text editing capabilities built on top of the Sora Editor framework with additional IDE features.
+
+```java
+package com.tom.rv2ide.editor.api
+
+interface IEditor {
+  File getFile();
+  boolean isModified();
+  void setSelection(Position position);
+  Position getCursorLSPPosition();
+  // ... more methods
+}
+
+interface ILspEditor {
+  void setLanguageServer(ILanguageServer server);
+  void executeCommand(Command command);
+  void findDefinition();
+  // ... more methods
+}
+```
+
+**Key Features:**
+- File editing and content management
+- Selection and cursor control
+- LSP integration for language features
+- Tree-sitter support for syntax parsing
+
+### Project Management
+
+The project layer manages workspaces, Gradle projects, and module structures.
+
+```kotlin
+interface IProjectManager {
+  val projectDir: File
+  val projectSyncIssues: ProjectSyncIssues?
+  
+  fun openProject(directory: File)
+  suspend fun setupProject(project: IProject)
+  fun getWorkspace(): IWorkspace?
+  fun notifyFileCreated(file: File)
+  fun notifyFileDeleted(file: File)
+  fun notifyFileRenamed(from: File, to: File)
+}
+
+interface IWorkspace {
+  fun getProjectDir(): File
+  fun getRootProject(): GradleProject
+  fun getSubProjects(): List<GradleProject>
+  fun findProject(path: String): GradleProject?
+  fun androidProjects(): Sequence<AndroidModule>
+  fun findModuleForFile(file: Path): ModuleProject?
+}
+```
+
+**Responsibilities:**
+- Opening and closing projects
+- Synchronizing with Gradle
+- Managing build variants
+- File change notifications
+
+### Language Server Protocol
+
+The LSP layer enables language-specific features through standardized protocols.
+
+```kotlin
+interface ILanguageServer {
+  val serverId: String?
+  val client: ILanguageClient?
+  
+  fun shutdown()
+  fun connectClient(client: ILanguageClient?)
+  fun applySettings(settings: IServerSettings?)
+  fun setupWorkspace(workspace: IWorkspace)
+  
+  // Language features
+  fun complete(params: CompletionParams?): CompletionResult
+  suspend fun findReferences(params: ReferenceParams): ReferenceResult
+  suspend fun findDefinition(params: DefinitionParams): DefinitionResult
+  suspend fun signatureHelp(params: SignatureHelpParams): SignatureHelp
+  suspend fun analyze(file: Path): DiagnosticResult
+  fun formatCode(params: FormatCodeParams?): CodeFormatResult
+}
+```
+
+**Supported Features:**
+- Code completion
+- Go to definition
+- Find references
+- Signature help
+- Diagnostics and error checking
+- Code formatting
+
+### Tooling API Integration
+
+The tooling layer wraps Gradle's Tooling API for build operations.
+
+```kotlin
+interface IToolingApiServer {
+  fun metadata(): CompletableFuture<ToolingServerMetadata>
+  fun initialize(params: InitializeProjectParams): CompletableFuture<InitializeResult>
+  fun isServerInitialized(): CompletableFuture<Boolean>
+  fun getRootProject(): CompletableFuture<IProject>
+  fun executeTasks(message: TaskExecutionMessage): CompletableFuture<TaskExecutionResult>
+  fun cancelCurrentBuild(): CompletableFuture<BuildCancellationRequestResult>
+  fun shutdown(): CompletableFuture<Void>
+}
+
+interface IProject : IProjectQueries {
+  fun getProjects(): CompletableFuture<List<BasicProjectMetadata>>
+  fun getProjectSyncIssues(): CompletableFuture<DefaultProjectSyncIssues>
+}
+```
+
+**Capabilities:**
+- Project initialization
+- Task execution
+- Build cancellation
+- Project model queries
+
+### Template System
+
+The template system provides project and file generation capabilities.
+
+```kotlin
+interface ITemplateProvider {
+  fun getTemplates(): List<Template<*>>
+  fun getTemplate(templateId: String): Template<*>?
+  fun reload()
+  fun release()
+}
+
+interface RecipeExecutor {
+  fun projectData(): ProjectTemplateData?
+  fun copy(source: File, dest: File)
+  fun save(source: String, dest: File)
+  fun openAsset(path: String): InputStream
+  fun copyAsset(path: String, dest: File)
+  fun copyAssetsRecursively(path: String, destDir: File)
+}
+```
+
+**Features:**
+- Project template management
+- File template execution
+- Asset copying and processing
+
+### Action System
+
+The action system enables extensible UI actions throughout the IDE.
+
+```kotlin
+abstract class ActionsRegistry {
+  abstract fun registerAction(action: ActionItem): Boolean
+  abstract fun unregisterAction(action: ActionItem): Boolean
+  abstract fun findAction(location: ActionItem.Location, id: String): ActionItem?
+  abstract fun fillMenu(params: FillMenuParams)
+  abstract fun getActions(location: ActionItem.Location): Map<String, ActionItem>
+}
+
+interface ActionItem {
+  val id: String
+  var label: String
+  var visible: Boolean
+  var enabled: Boolean
+  var icon: Drawable?
+  
+  fun prepare(data: ActionData)
+  suspend fun execAction(data: ActionData): Any
+  fun postExec(data: ActionData, result: Any)
+}
+```
+
+**Action Locations:**
+- Editor toolbar
+- Editor sidebar
+- Text action menu
+- Code actions submenu
+- File tree context menu
+- UI Designer toolbar
+
+## Service Loading
+
+The IDE uses a ServiceLoader pattern for discovering and loading implementations:
+
+```kotlin
+val projectManager = ServiceLoader.load(IProjectManager::class.java)
+  .findFirstOrThrow()
+
+val templateProvider = ServiceLoader.load(ITemplateProvider::class.java)
+  .findFirstOrThrow()
+```
+
+Plugins can register their own service implementations to extend functionality.
+
+## Event System
+
+The IDE uses an event bus for decoupled communication between components:
+
+```kotlin
+// Subscribe to events
+@Subscribe
+fun onFileOpened(event: FileOpenEvent) {
+  // Handle file open
+}
+
+// Post events
+eventBus.post(FileOpenEvent(file))
+```
+
+## Dependency Injection
+
+The Lookup pattern is used for dependency injection:
+
+```kotlin
+val buildService = Lookup.getDefault().lookup(BuildService.KEY_PROJECT_PROXY)
+val editor = data.get(IEditor::class.java)
+```
+
+## Threading Model
+
+- **UI Thread**: All UI operations and some callbacks
+- **Background Threads**: File operations, network requests, builds
+- **Coroutines**: Async operations in LSP and project management
+
+<Warning>
+  Always check threading requirements when implementing APIs. Some methods must run on the UI thread.
+</Warning>
+
+## Module Structure
+
+The source code is organized into modules:
+
+```
+source/
+├── editor/          # Editor components
+│   └── api/         # Editor APIs
+├── core/            # Core functionality
+│   ├── projects/    # Project management
+│   ├── lsp-api/     # LSP integration
+│   └── actions/     # Action system
+├── tooling/         # Gradle tooling
+│   ├── api/         # Tooling APIs
+│   └── model/       # Tooling models
+└── utilities/       # Utilities
+    └── templates-api/ # Template system
+```
+
+## Extension Points
+
+Plugins can extend the IDE at multiple points:
+
+1. **Language Servers** - Add support for new languages
+2. **Actions** - Add custom commands and menu items
+3. **Templates** - Provide project and file templates
+4. **Build Tools** - Integrate with build systems
+5. **UI Components** - Add panels, dialogs, and views
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Editor API" icon="code" href="./editor-api">
+    Learn about editor manipulation APIs
+  </Card>
+  
+  <Card title="Plugin Development" icon="puzzle-piece" href="./plugin-development">
+    Start building your own plugin
+  </Card>
+</CardGroup>

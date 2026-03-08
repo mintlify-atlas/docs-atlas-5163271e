@@ -1,0 +1,542 @@
+---
+title: LSP API
+description: Language Server Protocol integration for code intelligence features
+---
+
+The LSP API provides interfaces for implementing Language Server Protocol features in Android Code Studio, enabling code completion, navigation, diagnostics, and more.
+
+## Core Interfaces
+
+### ILanguageServer
+
+The main interface for implementing language server functionality.
+
+**Source**: `core/lsp-api/src/main/java/com/tom/rv2ide/lsp/api/ILanguageServer.kt:57`
+
+```kotlin
+package com.tom.rv2ide.lsp.api
+
+import com.tom.rv2ide.lsp.models.*
+import com.tom.rv2ide.models.Range
+import com.tom.rv2ide.projects.IWorkspace
+import java.nio.file.Path
+
+interface ILanguageServer {
+  
+  // Server identity
+  val serverId: String?
+  val client: ILanguageClient?
+  
+  // Lifecycle
+  fun shutdown()
+  fun connectClient(client: ILanguageClient?)
+  fun applySettings(settings: IServerSettings?)
+  fun setupWorkspace(workspace: IWorkspace)
+  
+  // Code completion
+  fun complete(params: CompletionParams?): CompletionResult
+  
+  // Code navigation
+  suspend fun findReferences(params: ReferenceParams): ReferenceResult
+  suspend fun findDefinition(params: DefinitionParams): DefinitionResult
+  suspend fun expandSelection(params: ExpandSelectionParams): Range
+  
+  // Documentation
+  suspend fun signatureHelp(params: SignatureHelpParams): SignatureHelp
+  suspend fun hover(params: DefinitionParams): MarkupContent
+  
+  // Diagnostics
+  suspend fun analyze(file: Path): DiagnosticResult
+  
+  // Formatting
+  fun formatCode(params: FormatCodeParams?): CodeFormatResult
+  
+  // Error handling
+  fun handleFailure(failure: LSPFailure?): Boolean
+}
+```
+
+### ILanguageClient
+
+Interface for receiving notifications from the language server.
+
+**Source**: `core/lsp-api/src/main/java/com/tom/rv2ide/lsp/api/ILanguageClient.java`
+
+```java
+package com.tom.rv2ide.lsp.api;
+
+import com.tom.rv2ide.lsp.models.DiagnosticResult;
+import com.tom.rv2ide.lsp.models.ShowDocumentParams;
+import java.nio.file.Path;
+
+public interface ILanguageClient {
+  
+  // Diagnostics
+  void publishDiagnostics(Path file, DiagnosticResult result);
+  
+  // Document operations
+  void showDocument(ShowDocumentParams params);
+  
+  // Messages
+  void logMessage(int type, String message);
+  void showMessage(int type, String message);
+}
+```
+
+## Implementing a Language Server
+
+### Basic Server Implementation
+
+Create a custom language server:
+
+```kotlin
+import com.tom.rv2ide.lsp.api.ILanguageServer
+import com.tom.rv2ide.lsp.api.ILanguageClient
+import com.tom.rv2ide.lsp.models.*
+import com.tom.rv2ide.projects.IWorkspace
+import java.nio.file.Path
+
+class MyLanguageServer : ILanguageServer {
+  
+  override val serverId = "my-language-server"
+  override var client: ILanguageClient? = null
+  private var workspace: IWorkspace? = null
+  
+  override fun shutdown() {
+    // Release resources
+    workspace = null
+    client = null
+  }
+  
+  override fun connectClient(client: ILanguageClient?) {
+    this.client = client
+  }
+  
+  override fun applySettings(settings: IServerSettings?) {
+    // Apply user preferences
+  }
+  
+  override fun setupWorkspace(workspace: IWorkspace) {
+    this.workspace = workspace
+  }
+  
+  override fun complete(params: CompletionParams?): CompletionResult {
+    // Implement code completion
+    val items = mutableListOf<CompletionItem>()
+    // ... populate completion items
+    return CompletionResult(items)
+  }
+  
+  override suspend fun findDefinition(params: DefinitionParams): DefinitionResult {
+    // Implement go-to-definition
+    // Return locations of definition
+    return DefinitionResult.EMPTY
+  }
+  
+  override suspend fun analyze(file: Path): DiagnosticResult {
+    // Analyze file and return diagnostics
+    val diagnostics = mutableListOf<DiagnosticItem>()
+    // ... add errors, warnings, etc.
+    return DiagnosticResult(diagnostics)
+  }
+  
+  // Implement other methods...
+}
+```
+
+### Register Language Server
+
+Register your server with the IDE:
+
+```kotlin
+import com.tom.rv2ide.lsp.api.ILanguageServerRegistry
+
+val registry = ILanguageServerRegistry.getDefault()
+val myServer = MyLanguageServer()
+
+// Register for specific file types
+registry.register(myServer, listOf(".kt", ".java"))
+```
+
+## Code Completion
+
+### Completion Parameters
+
+Handle completion requests:
+
+```kotlin
+import com.tom.rv2ide.lsp.models.*
+import com.tom.rv2ide.models.Position
+
+override fun complete(params: CompletionParams?): CompletionResult {
+  if (params == null) return CompletionResult.EMPTY
+  
+  val file = params.file
+  val position = params.position  // Cursor position
+  val prefix = params.prefix      // Text before cursor
+  
+  val items = mutableListOf<CompletionItem>()
+  
+  // Add keyword completions
+  items.add(CompletionItem().apply {
+    label = "class"
+    detail = "Keyword"
+    kind = CompletionItemKind.Keyword
+    insertText = "class "
+  })
+  
+  // Add method completions
+  items.add(CompletionItem().apply {
+    label = "toString()"
+    detail = "String"
+    kind = CompletionItemKind.Method
+    insertText = "toString()"
+  })
+  
+  return CompletionResult(items)
+}
+```
+
+<ParamField path="params.file" type="Path">
+  The file being edited
+</ParamField>
+
+<ParamField path="params.position" type="Position">
+  The cursor position where completion was triggered
+</ParamField>
+
+<ParamField path="params.prefix" type="String">
+  The text before the cursor on the current line
+</ParamField>
+
+### Completion Items
+
+Create rich completion items:
+
+```kotlin
+val item = CompletionItem().apply {
+  label = "myMethod"                    // Display text
+  detail = "void myMethod(String arg)"  // Type/signature
+  documentation = "Does something"      // Description
+  kind = CompletionItemKind.Method
+  insertText = "myMethod($1)$0"        // Snippet with placeholders
+  sortText = "0000"                     // Sort priority
+  filterText = "myMethod"               // Text to match against
+}
+```
+
+## Code Navigation
+
+### Go to Definition
+
+Implement definition lookup:
+
+```kotlin
+import com.tom.rv2ide.lsp.models.*
+import com.tom.rv2ide.models.*
+
+override suspend fun findDefinition(params: DefinitionParams): DefinitionResult {
+  val file = params.file
+  val position = params.position
+  
+  // Find the symbol at position
+  val symbol = findSymbolAt(file, position)
+  
+  if (symbol != null) {
+    // Return definition location
+    val location = Location().apply {
+      this.file = symbol.definitionFile
+      this.range = Range(
+        Position(symbol.line, symbol.column),
+        Position(symbol.line, symbol.column + symbol.name.length)
+      )
+    }
+    return DefinitionResult(listOf(location))
+  }
+  
+  return DefinitionResult.EMPTY
+}
+```
+
+### Find References
+
+Find all references to a symbol:
+
+```kotlin
+override suspend fun findReferences(params: ReferenceParams): ReferenceResult {
+  val file = params.file
+  val position = params.position
+  val includeDeclaration = params.includeDeclaration
+  
+  val locations = mutableListOf<Location>()
+  
+  // Search for references across the workspace
+  workspace?.getSubProjects()?.forEach { project ->
+    // Search in project files
+    val refs = searchReferences(project, file, position)
+    locations.addAll(refs)
+  }
+  
+  return ReferenceResult(locations)
+}
+```
+
+## Diagnostics
+
+### Analyze Files
+
+Perform analysis and report issues:
+
+```kotlin
+import com.tom.rv2ide.lsp.models.*
+import java.nio.file.Path
+
+override suspend fun analyze(file: Path): DiagnosticResult {
+  val diagnostics = mutableListOf<DiagnosticItem>()
+  
+  // Parse and analyze file
+  val errors = analyzeFile(file)
+  
+  errors.forEach { error ->
+    diagnostics.add(DiagnosticItem().apply {
+      range = error.range
+      severity = DiagnosticSeverity.ERROR
+      message = error.message
+      source = "my-language-server"
+    })
+  }
+  
+  return DiagnosticResult(diagnostics)
+}
+```
+
+### Publish Diagnostics
+
+Send diagnostics to the client:
+
+```kotlin
+fun analyzeAndPublish(file: Path) {
+  val result = analyze(file)
+  client?.publishDiagnostics(file, result)
+}
+```
+
+<ResponseField name="DiagnosticResult" type="object">
+  <ResponseField name="diagnostics" type="List<DiagnosticItem>">
+    List of diagnostic items (errors, warnings, info)
+  </ResponseField>
+</ResponseField>
+
+### Diagnostic Severity
+
+```kotlin
+enum class DiagnosticSeverity {
+  ERROR,    // Red error
+  WARNING,  // Yellow warning
+  INFO,     // Blue information
+  HINT      // Suggestion
+}
+```
+
+## Signature Help
+
+### Parameter Hints
+
+Provide parameter information:
+
+```kotlin
+import com.tom.rv2ide.lsp.models.*
+
+override suspend fun signatureHelp(params: SignatureHelpParams): SignatureHelp {
+  val file = params.file
+  val position = params.position
+  
+  // Find function call at position
+  val call = findFunctionCall(file, position)
+  
+  if (call != null) {
+    val signature = SignatureInformation().apply {
+      label = "myFunction(arg1: String, arg2: Int)"
+      documentation = "Performs an operation"
+      parameters = listOf(
+        ParameterInformation("arg1", "The first argument"),
+        ParameterInformation("arg2", "The second argument")
+      )
+    }
+    
+    return SignatureHelp().apply {
+      signatures = listOf(signature)
+      activeSignature = 0
+      activeParameter = call.currentParameter
+    }
+  }
+  
+  return SignatureHelp.EMPTY
+}
+```
+
+## Code Formatting
+
+### Format Code
+
+Implement code formatting:
+
+```kotlin
+import com.tom.rv2ide.lsp.models.*
+
+override fun formatCode(params: FormatCodeParams?): CodeFormatResult {
+  if (params == null) return CodeFormatResult(false, emptyList())
+  
+  val content = params.content
+  val edits = mutableListOf<TextEdit>()
+  
+  // Format the code
+  val formatted = formatSource(content)
+  
+  // Create text edit for entire document
+  edits.add(TextEdit().apply {
+    range = Range(
+      Position(0, 0),
+      Position(content.lines().size, 0)
+    )
+    newText = formatted
+  })
+  
+  return CodeFormatResult(true, edits)
+}
+```
+
+## Hover Documentation
+
+### Show Documentation
+
+Provide hover information:
+
+```kotlin
+override suspend fun hover(params: DefinitionParams): MarkupContent {
+  val file = params.file
+  val position = params.position
+  
+  val symbol = findSymbolAt(file, position)
+  
+  if (symbol != null) {
+    return MarkupContent().apply {
+      kind = MarkupKind.MARKDOWN
+      value = """
+        ### ${symbol.name}
+        
+        **Type:** ${symbol.type}
+        
+        ${symbol.documentation}
+        
+        ```java
+        ${symbol.signature}
+        ```
+      """.trimIndent()
+    }
+  }
+  
+  return MarkupContent()
+}
+```
+
+## Complete Example
+
+Here's a complete language server implementation:
+
+```kotlin
+import com.tom.rv2ide.lsp.api.*
+import com.tom.rv2ide.lsp.models.*
+import com.tom.rv2ide.models.*
+import com.tom.rv2ide.projects.IWorkspace
+import java.nio.file.Path
+
+class KotlinLanguageServer : ILanguageServer {
+  
+  override val serverId = "kotlin-language-server"
+  override var client: ILanguageClient? = null
+  private var workspace: IWorkspace? = null
+  private val analyzer = KotlinAnalyzer()
+  
+  override fun shutdown() {
+    analyzer.shutdown()
+    workspace = null
+    client = null
+  }
+  
+  override fun connectClient(client: ILanguageClient?) {
+    this.client = client
+    client?.logMessage(1, "Kotlin language server connected")
+  }
+  
+  override fun setupWorkspace(workspace: IWorkspace) {
+    this.workspace = workspace
+    analyzer.indexWorkspace(workspace)
+  }
+  
+  override fun applySettings(settings: IServerSettings?) {
+    // Apply settings
+  }
+  
+  override fun complete(params: CompletionParams?): CompletionResult {
+    if (params == null) return CompletionResult.EMPTY
+    
+    return analyzer.complete(
+      params.file,
+      params.position,
+      params.prefix
+    )
+  }
+  
+  override suspend fun findDefinition(params: DefinitionParams): DefinitionResult {
+    return analyzer.findDefinition(params.file, params.position)
+  }
+  
+  override suspend fun findReferences(params: ReferenceParams): ReferenceResult {
+    return analyzer.findReferences(
+      params.file,
+      params.position,
+      params.includeDeclaration
+    )
+  }
+  
+  override suspend fun signatureHelp(params: SignatureHelpParams): SignatureHelp {
+    return analyzer.getSignatureHelp(params.file, params.position)
+  }
+  
+  override suspend fun analyze(file: Path): DiagnosticResult {
+    val result = analyzer.analyze(file)
+    client?.publishDiagnostics(file, result)
+    return result
+  }
+  
+  override suspend fun expandSelection(params: ExpandSelectionParams): Range {
+    return analyzer.expandSelection(params.file, params.range)
+  }
+  
+  override fun formatCode(params: FormatCodeParams?): CodeFormatResult {
+    if (params == null) return CodeFormatResult(false, emptyList())
+    return analyzer.format(params.content)
+  }
+  
+  override fun handleFailure(failure: LSPFailure?): Boolean {
+    if (failure != null) {
+      client?.logMessage(3, "LSP Error: ${failure.message}")
+      return true
+    }
+    return false
+  }
+}
+```
+
+## Related APIs
+
+<CardGroup cols={2}>
+  <Card title="Editor API" icon="code" href="./editor-api">
+    Integrate LSP with editors
+  </Card>
+  
+  <Card title="Project API" icon="folder-tree" href="./project-api">
+    Access workspace information
+  </Card>
+</CardGroup>

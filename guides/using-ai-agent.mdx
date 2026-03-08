@@ -1,0 +1,547 @@
+---
+title: Using the AI Agent
+description: Learn how to use Android Code Studio's project-aware AI assistant for coding help
+icon: robot
+---
+
+Android Code Studio features a fully project-aware AI agent that understands your code, modules, and project structure to provide intelligent coding assistance.
+
+## Overview
+
+The AI Agent is more than a code generator - it's a context-aware assistant that:
+
+- **Understands your project** - Analyzes project structure, dependencies, and code
+- **Maintains conversation history** - Remembers previous interactions
+- **Tracks modifications** - Records all code changes with undo capability
+- **Supports multiple providers** - Works with various AI services
+- **Writes files directly** - Can create and modify files with permission
+
+<Note>
+  The AI Agent requires an API key from a supported provider and internet connectivity.
+</Note>
+
+## Supported Providers
+
+Android Code Studio supports multiple AI providers:
+
+<Tabs>
+  <Tab title="Anthropic (Claude)">
+    **Claude models** by Anthropic
+    
+    - Claude 3.5 Sonnet
+    - Claude 3 Opus
+    - Claude 3 Sonnet
+    - Claude 3 Haiku
+    
+    **Setup:**
+    1. Get API key from [console.anthropic.com](https://console.anthropic.com)
+    2. In Android Code Studio: **Settings → AI Agent → Provider**
+    3. Select **Anthropic**
+    4. Enter your API key
+  </Tab>
+
+  <Tab title="OpenAI">
+    **GPT models** by OpenAI
+    
+    - GPT-4 Turbo
+    - GPT-4
+    - GPT-3.5 Turbo
+    
+    **Setup:**
+    1. Get API key from [platform.openai.com](https://platform.openai.com)
+    2. In Android Code Studio: **Settings → AI Agent → Provider**
+    3. Select **OpenAI**
+    4. Enter your API key
+  </Tab>
+
+  <Tab title="Google (Gemini)">
+    **Gemini models** by Google
+    
+    - Gemini Pro
+    - Gemini Ultra
+    
+    **Setup:**
+    1. Get API key from [ai.google.dev](https://ai.google.dev)
+    2. In Android Code Studio: **Settings → AI Agent → Provider**
+    3. Select **Google**
+    4. Enter your API key
+  </Tab>
+
+  <Tab title="DeepSeek">
+    **DeepSeek Coder** models
+    
+    - DeepSeek Coder
+    - DeepSeek Chat
+    
+    **Setup:**
+    1. Get API key from DeepSeek
+    2. In Android Code Studio: **Settings → AI Agent → Provider**
+    3. Select **DeepSeek**
+    4. Enter your API key
+  </Tab>
+
+  <Tab title="Local LLM">
+    **Run local models** via compatible APIs
+    
+    - LM Studio
+    - Ollama
+    - LocalAI
+    - Any OpenAI-compatible API
+    
+    **Setup:**
+    1. Start your local LLM server
+    2. In Android Code Studio: **Settings → AI Agent → Provider**
+    3. Select **Local LLM**
+    4. Configure:
+       - **Base URL**: Your server address (e.g., `http://localhost:1234`)
+       - **Model**: Model identifier
+       - **API Key**: If required by your server
+  </Tab>
+</Tabs>
+
+## Getting Started
+
+<Steps>
+  <Step title="Configure the AI Agent">
+    1. Open **Settings → AI Agent**
+    2. Select your preferred provider
+    3. Enter your API key
+    4. (Optional) Choose a specific model
+    5. Save settings
+  </Step>
+
+  <Step title="Open the AI Assistant">
+    Tap the **AI Agent** icon in the toolbar, or select **Tools → AI Agent** from the menu.
+  </Step>
+
+  <Step title="Grant Permissions">
+    On first use, the AI Agent requests permission to:
+    - Read your project files
+    - Access project structure
+    - Modify files (with confirmation)
+    
+    <Warning>
+      The AI Agent can write files. Always review changes before accepting.
+    </Warning>
+  </Step>
+
+  <Step title="Start Chatting">
+    Type your question or request and press Send.
+  </Step>
+</Steps>
+
+## Project Awareness
+
+The AI Agent analyzes your project to provide contextual assistance:
+
+```kotlin title="ProjectData.kt"
+data class ProjectTreeResult(
+    val projectName: String,
+    val projectPath: String,
+    val modules: List<ModuleInfo>,
+    val sourceFiles: List<String>,
+    val dependencies: List<String>
+)
+```
+
+When you ask for help, the agent knows:
+- Your project structure and modules
+- Available dependencies
+- Existing classes and files
+- Build configuration
+- Package names
+
+### Example Interactions
+
+<CodeGroup>
+  ```text Add Feature
+  You: "Add a RecyclerView adapter for displaying a list of users"
+  
+  Agent: Analyzes your project structure, creates:
+  - UserAdapter.kt in the correct package
+  - user_item.xml in res/layout
+  - Adds RecyclerView dependency if missing
+  ```
+
+  ```text Fix Bug
+  You: "Fix the NullPointerException in MainActivity"
+  
+  Agent: Reviews MainActivity.kt, identifies the issue,
+  and suggests or applies a fix
+  ```
+
+  ```text Refactor Code
+  You: "Refactor this Activity to use ViewModel"
+  
+  Agent: Creates a ViewModel class, updates the Activity,
+  and adds necessary dependencies
+  ```
+
+  ```text Explain Code
+  You: "Explain how the network module works"
+  
+  Agent: Analyzes your networking code and provides
+  a detailed explanation
+  ```
+</CodeGroup>
+
+## File Operations
+
+The AI Agent can create and modify files:
+
+### Writing Files
+
+```kotlin title="AIAgent.kt:54"
+fun writeFile(filePath: String, content: String): FileWriteResult
+```
+
+When the agent writes a file:
+
+1. **Permission Check** - Asks for your confirmation
+2. **Content Preview** - Shows what will be written
+3. **Write Operation** - Creates or updates the file
+4. **Verification** - Confirms success
+
+<Tip>
+  You can review and edit suggested code before accepting it.
+</Tip>
+
+### File Write Results
+
+```kotlin title="FileWriteResult.kt"
+sealed class FileWriteResult {
+    data class Success(val path: String) : FileWriteResult()
+    data class Failure(val error: String) : FileWriteResult()
+    object PermissionDenied : FileWriteResult()
+}
+```
+
+## Modification Tracking
+
+The agent tracks all modifications:
+
+```kotlin title="AIAgent.kt:46-47"
+fun recordModification(filePath: String, oldContent: String?, newContent: String, success: Boolean)
+fun getModificationHistory(): List<ModificationAttempt>
+```
+
+### Modification History
+
+```kotlin
+data class ModificationAttempt(
+    val timestamp: Long,
+    val filePath: String,
+    val previousContent: String?,
+    val newContent: String,
+    val attemptNumber: Int = 0,
+    val success: Boolean = false
+)
+```
+
+View history in **Tools → AI Agent → View Modifications**.
+
+### Undo Changes
+
+Revert unwanted changes:
+
+```kotlin title="AIAgent.kt:46"
+fun undoLastModification(): Boolean
+```
+
+Click **Undo** in the AI Agent panel or use **Edit → Undo AI Changes**.
+
+## Conversation Management
+
+The AI Agent maintains conversation context:
+
+### Clear Conversation
+
+```kotlin title="AIAgent.kt:36"
+fun clearConversation()
+```
+
+To start fresh:
+- Click **Clear Chat** in the AI Agent panel
+- Or select **Tools → AI Agent → Clear Conversation**
+
+<Note>
+  Clearing the conversation removes context but preserves modification history.
+</Note>
+
+### Context Window
+
+The agent maintains recent messages for context:
+
+- **User messages** - Your questions and requests
+- **Assistant responses** - AI-generated answers
+- **System messages** - Project context and information
+- **Modification results** - File operation outcomes
+
+## Retry Logic
+
+The agent includes automatic retry for failed operations:
+
+```kotlin title="AIAgent.kt:49-52"
+fun resetAttemptCount()
+fun incrementAttemptCount()
+fun getCurrentAttemptCount(): Int
+fun canRetry(): Boolean
+```
+
+Retries occur when:
+- API rate limits are hit
+- Network errors occur
+- Generation fails temporarily
+
+Default: Up to 3 retry attempts
+
+## Best Practices
+
+### Be Specific
+
+<Tabs>
+  <Tab title="Good">
+    "Create a RecyclerView adapter for User objects with name and email fields, showing a profile picture using Glide"
+  </Tab>
+
+  <Tab title="Bad">
+    "Make a list"
+  </Tab>
+</Tabs>
+
+### Provide Context
+
+<Tabs>
+  <Tab title="Good">
+    "In MainActivity, add a button that navigates to the ProfileActivity and passes the user ID"
+  </Tab>
+
+  <Tab title="Bad">
+    "Add a button"
+  </Tab>
+</Tabs>
+
+### Review Generated Code
+
+<Warning>
+  Always review AI-generated code before accepting it. The agent may:
+  - Make assumptions about your requirements
+  - Use deprecated APIs
+  - Introduce bugs
+  - Not follow your coding style
+</Warning>
+
+### Iterate
+
+If the result isn't perfect:
+
+1. **Provide feedback**: "The button should be in the top right corner"
+2. **Ask for modifications**: "Change this to use Kotlin coroutines instead"
+3. **Request explanations**: "Why did you use this approach?"
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Generate Boilerplate Code">
+    "Create a data class for an API response with id, title, description, and timestamp fields"
+    
+    The agent generates:
+    ```kotlin
+    data class ApiResponse(
+        val id: Long,
+        val title: String,
+        val description: String,
+        val timestamp: Long
+    )
+    ```
+  </Accordion>
+
+  <Accordion title="Add Dependencies">
+    "Add Retrofit and Gson for networking"
+    
+    The agent updates `build.gradle.kts`:
+    ```kotlin
+    dependencies {
+        implementation("com.squareup.retrofit2:retrofit:2.9.0")
+        implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Implement Patterns">
+    "Implement the Repository pattern for user data with Room database"
+    
+    The agent creates:
+    - UserEntity.kt
+    - UserDao.kt
+    - UserRepository.kt
+    - AppDatabase.kt
+  </Accordion>
+
+  <Accordion title="Fix Errors">
+    "Fix the crash when rotating the screen in MainActivity"
+    
+    The agent:
+    1. Analyzes MainActivity
+    2. Identifies lifecycle issues
+    3. Suggests ViewModel implementation
+    4. Applies the fix
+  </Accordion>
+
+  <Accordion title="Optimize Code">
+    "Optimize this image loading code for better performance"
+    
+    The agent:
+    1. Reviews the code
+    2. Suggests caching strategies
+    3. Recommends using Glide or Coil
+    4. Implements the optimization
+  </Accordion>
+</AccordionGroup>
+
+## Permissions
+
+The AI Agent respects user permissions:
+
+```kotlin title="AIPermissionManager.kt"
+enum class PermissionType {
+    READ_PROJECT,
+    WRITE_FILES,
+    EXECUTE_COMMANDS,
+    ACCESS_NETWORK
+}
+```
+
+Configure permissions in **Settings → AI Agent → Permissions**:
+
+- **Read Project** - Allow reading project files
+- **Write Files** - Allow creating/modifying files
+- **Execute Commands** - Allow running Gradle tasks
+- **Access Network** - Allow API requests
+
+<Warning>
+  Grant only the permissions you're comfortable with. You can revoke them anytime.
+</Warning>
+
+## Limitations
+
+<CardGroup cols={2}>
+  <Card title="Context Size" icon="window-maximize">
+    Large projects may exceed the model's context window. Focus requests on specific modules.
+  </Card>
+
+  <Card title="API Costs" icon="dollar-sign">
+    AI providers charge per request. Monitor usage to control costs.
+  </Card>
+
+  <Card title="Network Required" icon="wifi">
+    Requires internet connectivity (except for local LLM setup).
+  </Card>
+
+  <Card title="Not Always Accurate" icon="triangle-exclamation">
+    AI can make mistakes. Always review generated code.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="API Key Invalid">
+    **Error**: "Invalid API key" or "Authentication failed"
+    
+    **Solution**:
+    1. Verify your API key is correct
+    2. Check that the key hasn't expired
+    3. Ensure you selected the correct provider
+    4. Re-enter the key in Settings
+  </Accordion>
+
+  <Accordion title="Rate Limited">
+    **Error**: "Rate limit exceeded"
+    
+    **Solution**:
+    1. Wait a few minutes before retrying
+    2. Check your API provider's rate limits
+    3. Consider upgrading your plan
+    4. Use retry logic (automatic)
+  </Accordion>
+
+  <Accordion title="Context Too Large">
+    **Error**: "Context length exceeded"
+    
+    **Solution**:
+    1. Be more specific in your requests
+    2. Focus on individual files or modules
+    3. Clear conversation and start fresh
+    4. Split large requests into smaller ones
+  </Accordion>
+
+  <Accordion title="No Response">
+    **Issue**: Agent doesn't respond
+    
+    **Solution**:
+    1. Check internet connectivity
+    2. Verify API service is operational
+    3. Restart the IDE
+    4. Check logs in Build Output
+  </Accordion>
+</AccordionGroup>
+
+## Security & Privacy
+
+<Warning>
+  Your code is sent to the AI provider's servers for processing. Be mindful of:
+  - Proprietary code
+  - API keys and secrets
+  - Sensitive data
+  - Company policies
+</Warning>
+
+### Best Practices
+
+- Don't share API keys or passwords with the agent
+- Review what data is being sent
+- Use local LLM for sensitive projects
+- Check your organization's AI usage policy
+
+## Advanced Configuration
+
+### Model Selection
+
+Choose the right model for your needs:
+
+- **Fast models** (GPT-3.5, Claude Haiku) - Quick responses, lower cost
+- **Powerful models** (GPT-4, Claude Opus) - Better understanding, higher cost
+- **Balanced models** (Claude Sonnet) - Good balance of speed and quality
+
+### Temperature Settings
+
+Adjust creativity vs. accuracy:
+
+```kotlin
+temperature = 0.2  // More deterministic, safer for code
+temperature = 0.8  // More creative, better for ideas
+```
+
+Configure in **Settings → AI Agent → Advanced**.
+
+### Custom Prompts
+
+Define system prompts for consistent behavior:
+
+**Settings → AI Agent → System Prompt**
+
+```
+You are an expert Android developer. Follow these guidelines:
+- Use Kotlin for all code
+- Follow Material Design principles
+- Include proper error handling
+- Add comments for complex logic
+```
+
+## Next Steps
+
+- [Configure environment variables](/guides/environment-variables) for AI agent settings
+- [Build your app](/guides/building-apps) with AI-generated code
+- [Debug issues](/guides/debugging) using AI assistance
+- Explore [plugins](/guides/plugins) that extend AI capabilities

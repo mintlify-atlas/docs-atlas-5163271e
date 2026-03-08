@@ -1,0 +1,261 @@
+---
+title: FAQ
+description: Frequently asked questions about Android Code Studio
+icon: circle-question
+---
+
+Find answers to common questions about Android Code Studio.
+
+## General Questions
+
+<AccordionGroup>
+  <Accordion title="What is Android Code Studio?">
+    Android Code Studio is a complete IDE for developing real, Gradle-based Android applications directly on Android devices. It provides a full development environment including code editors, build tools, SDK management, and more.
+  </Accordion>
+  
+  <Accordion title="Is Android Code Studio free?">
+    Yes! Android Code Studio is free and open-source software licensed under GPLv3. You can use it, modify it, and distribute it freely.
+  </Accordion>
+  
+  <Accordion title="Where can I download Android Code Studio?">
+    Download the latest version from [GitHub Releases](https://github.com/Mohammed-baqer-null/android-code-studio/releases).
+    
+    <Warning>
+      Only install from trusted sources (GitHub Releases). Apps from other sources may be modified or contain malware.
+    </Warning>
+  </Accordion>
+  
+  <Accordion title="Is Android Code Studio stable?">
+    Android Code Studio is currently in beta. While it's functional and actively used, you may encounter bugs or issues. Please report any problems you find on [GitHub Issues](https://github.com/Mohammed-baqer-null/android-code-studio/issues).
+  </Accordion>
+</AccordionGroup>
+
+## Installation & Setup
+
+<AccordionGroup>
+  <Accordion title="How do I install the build tools?">
+    After installing the Android Code Studio APK:
+    
+    1. Open the app
+    2. Follow the [installation guide](https://docs.androidide.com/tutorials/get-started.html) to install build tools
+    3. The app will guide you through downloading and configuring the necessary components
+    
+    This includes JDK, Android SDK, and other required tools.
+  </Accordion>
+  
+  <Accordion title="What are the system requirements?">
+    - Android device running Android 7.0 or higher (recommended: Android 8.0+)
+    - At least 4GB of free storage (recommended: 8GB or more)
+    - 2GB RAM minimum (recommended: 4GB or more)
+    - ARM or ARM64 processor
+  </Accordion>
+  
+  <Accordion title="Why is the download/installation taking so long?">
+    The build tools, SDK, and JDK are large downloads (several GB). On a mobile connection, this can take time. We recommend:
+    
+    - Using Wi-Fi for downloads
+    - Ensuring you have sufficient storage space
+    - Being patient during the initial setup
+  </Accordion>
+</AccordionGroup>
+
+## Project Compatibility
+
+<AccordionGroup>
+  <Accordion title="What Android Gradle Plugin version is required?">
+    Your project must use **Android Gradle Plugin v7.2.0 or newer**.
+    
+    <Warning>
+      Projects with older AGP versions are not supported and must be migrated to newer versions.
+    </Warning>
+    
+    To update your project's AGP version, modify the `build.gradle` file:
+    
+    ```gradle
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.2.0' // or newer
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Can I import existing Android Studio projects?">
+    Yes! Android Code Studio can open and build standard Gradle-based Android projects. Just ensure they use AGP v7.2.0 or newer.
+  </Accordion>
+  
+  <Accordion title="Which JDK versions are available?">
+    Android Code Studio includes:
+    - JDK 11
+    - JDK 17
+    
+    You can configure which JDK to use for your project.
+  </Accordion>
+</AccordionGroup>
+
+## Features & Capabilities
+
+<AccordionGroup>
+  <Accordion title="Does Android Code Studio support Kotlin?">
+    Yes! Android Code Studio includes a Kotlin language server with code completion, syntax highlighting, and other Kotlin-specific features.
+  </Accordion>
+  
+  <Accordion title="Is there a visual UI designer?">
+    Yes! Android Code Studio includes a UI Designer with:
+    - Layout inflater
+    - Drag & drop interface
+    - Visual attribute editor
+    - Resource reference resolution
+    - Auto-complete for resource values
+  </Accordion>
+  
+  <Accordion title="Can I use Git with Android Code Studio?">
+    Yes, Android Code Studio has built-in Git integration. You can commit, push, pull, and manage branches directly from the app.
+  </Accordion>
+  
+  <Accordion title="What is the AI Agent feature?">
+    The AI Agent is a project-aware AI assistant that understands your code, modules, and project structure. It can help with coding tasks, answer questions about your project, and provide suggestions.
+  </Accordion>
+  
+  <Accordion title="Can I install the NDK?">
+    The NDK cannot be installed through the SDK Manager in Android Code Studio because NDK binaries are not built for Android devices. However, you can work with projects that already have NDK components configured.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Build fails with 'Unsupported AGP version' error">
+    This means your project uses an Android Gradle Plugin version older than 7.2.0.
+    
+    **Solution**: Update your project's AGP version to 7.2.0 or newer in `build.gradle`:
+    
+    ```gradle
+    dependencies {
+        classpath 'com.android.tools.build:gradle:7.4.0'
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="App crashes or freezes">
+    If Android Code Studio crashes or becomes unresponsive:
+    
+    1. Check that you have enough free RAM and storage
+    2. Close other apps to free up memory
+    3. Try restarting Android Code Studio
+    4. If the issue persists, [report a bug](https://github.com/Mohammed-baqer-null/android-code-studio/issues/new?labels=bug&template=BUG.yml&title=%5BBug%5D%3A+)
+    
+    Include logcat output if possible for better diagnosis.
+  </Accordion>
+  
+  <Accordion title="Code completion not working">
+    If code completion isn't working:
+    
+    1. Make sure the project has been built successfully at least once
+    2. Wait for indexing to complete (check the status bar)
+    3. Try rebuilding the project
+    4. Restart the language server from settings
+    
+    If the issue persists, check the logs for errors.
+  </Accordion>
+  
+  <Accordion title="Terminal commands not working">
+    If terminal commands fail:
+    
+    1. Make sure build tools are properly installed
+    2. Check that environment variables are configured correctly
+    3. Some commands may not work on Android due to platform limitations
+    
+    The terminal includes essential packages, but not all Linux commands are available.
+  </Accordion>
+  
+  <Accordion title="SDK Manager issues">
+    The SDK Manager is accessible via the terminal and can install most Android SDK components. However:
+    
+    - Some tools like NDK cannot be installed (not built for Android)
+    - Large downloads may fail on unstable connections
+    - Ensure you have sufficient storage space
+    
+    Use `sdkmanager` commands in the terminal to manage SDK components.
+  </Accordion>
+</AccordionGroup>
+
+## Language Servers
+
+<AccordionGroup>
+  <Accordion title="Which language servers are available?">
+    Android Code Studio includes language servers for:
+    - Java (code completion, diagnostics, navigation)
+    - XML (layout files, manifests)
+    - Kotlin (code completion, syntax highlighting)
+  </Accordion>
+  
+  <Accordion title="Language server is slow or unresponsive">
+    Language servers require memory and processing power. If they're slow:
+    
+    1. Close other apps to free up RAM
+    2. Work with smaller files when possible
+    3. Wait for initial indexing to complete
+    4. Restart the language server from settings if needed
+  </Accordion>
+</AccordionGroup>
+
+## Translations
+
+<AccordionGroup>
+  <Accordion title="How can I help translate Android Code Studio?">
+    Visit the [Crowdin project page](https://crowdin.com/project/androidide) to contribute translations. Translations help make Android Code Studio accessible to more developers worldwide!
+  </Accordion>
+  
+  <Accordion title="My language has incorrect translations">
+    You can suggest corrections on [Crowdin](https://crowdin.com/project/androidide). The community reviews and approves translation changes.
+  </Accordion>
+</AccordionGroup>
+
+## Contributing & Support
+
+<AccordionGroup>
+  <Accordion title="How can I contribute to Android Code Studio?">
+    There are many ways to contribute:
+    - Report bugs and request features
+    - Submit pull requests
+    - Help with translations
+    - Improve documentation
+    - Help other users in the community
+    
+    See the [Contributing Guide](/community/contributing) for details.
+  </Accordion>
+  
+  <Accordion title="Where can I get help?">
+    - Join the [Telegram community](https://t.me/rv2ide) for quick help
+    - Search [GitHub Issues](https://github.com/Mohammed-baqer-null/android-code-studio/issues)
+    - Check the [Support page](/community/support) for all support channels
+  </Accordion>
+  
+  <Accordion title="How do I report a bug?">
+    [Create a bug report](https://github.com/Mohammed-baqer-null/android-code-studio/issues/new?labels=bug&template=BUG.yml&title=%5BBug%5D%3A+) on GitHub with:
+    - Steps to reproduce
+    - Expected vs actual behavior
+    - Android Code Studio version
+    - Device and Android version
+    - Screenshots or logs if applicable
+  </Accordion>
+</AccordionGroup>
+
+## Still Have Questions?
+
+<CardGroup cols={2}>
+  <Card title="Join Telegram" icon="telegram" href="https://t.me/rv2ide">
+    Ask questions and chat with the community
+  </Card>
+  
+  <Card title="Browse Documentation" icon="book" href="https://docs.androidide.com/">
+    Explore guides and tutorials
+  </Card>
+  
+  <Card title="GitHub Issues" icon="github" href="https://github.com/Mohammed-baqer-null/android-code-studio/issues">
+    Report bugs and request features
+  </Card>
+  
+  <Card title="Visit Website" icon="globe" href="https://m.androidide.com">
+    Learn more about Android Code Studio
+  </Card>
+</CardGroup>

@@ -1,0 +1,518 @@
+---
+title: Log Reader
+description: View application logs, debug output, and system messages in real-time
+icon: file-lines
+---
+
+The Log Reader provides real-time access to application logs, debug messages, and system output, essential for debugging and monitoring your Android applications.
+
+## Overview
+
+The Log Reader displays:
+
+- Application log messages (verbose, debug, info, warn, error)
+- Build output and compilation messages
+- Gradle build logs
+- Runtime exceptions and stack traces
+- System messages and warnings
+- Custom log entries from your code
+
+<Note>
+Log Reader uses Android's logcat system and custom IDE logging infrastructure.
+</Note>
+
+## Accessing Logs
+
+View logs through multiple interfaces:
+
+1. **Log Panel** - Bottom panel in the main IDE window
+2. **Build Output** - Dedicated panel for build logs
+3. **Run/Debug** - Console output during app execution
+4. **Terminal** - Command-line logcat access
+
+## Log Levels
+
+Android uses standard log levels:
+
+| Level | Priority | Color | Usage |
+|-------|----------|-------|-------|
+| **Verbose** | V | Gray | Detailed diagnostic information |
+| **Debug** | D | Blue | Debug messages for development |
+| **Info** | I | Green | General informational messages |
+| **Warning** | W | Orange | Warning messages, potential issues |
+| **Error** | E | Red | Error messages, exceptions |
+| **Assert** | A | Purple | Assert failures |
+
+<CodeGroup>
+```kotlin Logging in Code
+import android.util.Log
+
+class MainActivity : AppCompatActivity() {
+    companion object {
+        private const val TAG = "MainActivity"
+    }
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        Log.v(TAG, "Verbose: Detailed information")
+        Log.d(TAG, "Debug: Debug message")
+        Log.i(TAG, "Info: App started successfully")
+        Log.w(TAG, "Warning: Potential issue detected")
+        Log.e(TAG, "Error: Something went wrong", exception)
+    }
+}
+```
+
+```java Java Logging
+import android.util.Log;
+
+public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
+    
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        Log.d(TAG, "Activity created");
+        Log.i(TAG, "Initializing components");
+        
+        try {
+            // Some operation
+        } catch (Exception e) {
+            Log.e(TAG, "Operation failed", e);
+        }
+    }
+}
+```
+</CodeGroup>
+
+## Viewing Logs
+
+### IDE Log Panel
+
+The integrated log panel shows real-time log output:
+
+<Steps>
+  <Step title="Open Log Panel">
+    Click "Logcat" or "Build Output" at the bottom of the IDE
+  </Step>
+  
+  <Step title="Select Filter">
+    Choose log level filter (All, Verbose, Debug, Info, Warning, Error)
+  </Step>
+  
+  <Step title="Search Logs">
+    Use the search box to filter by text or tag
+  </Step>
+  
+  <Step title="Clear Logs">
+    Tap the clear button to remove old log entries
+  </Step>
+</Steps>
+
+### Build Logs
+
+View detailed build output:
+
+- Gradle task execution
+- Compilation messages
+- Dependency resolution
+- Build errors and warnings
+- Build time statistics
+
+<CodeGroup>
+```bash Build Output Example
+> Task :app:compileDebugJavaWithJavac
+Note: Some input files use or override a deprecated API.
+
+> Task :app:mergeDebugResources
+Merging resources...
+
+> Task :app:processDebugManifest
+Processing manifest...
+
+> Task :app:packageDebug
+Building APK...
+
+BUILD SUCCESSFUL in 45s
+```
+</CodeGroup>
+
+### Application Logs
+
+Runtime logs from your running application:
+
+```bash Logcat Output Format
+Timestamp  PID-TID  Level  Tag               Message
+2024-03-08 12:34:56.789  12345-12345  I  MainActivity      App started
+2024-03-08 12:34:56.890  12345-12345  D  NetworkManager    Fetching data...
+2024-03-08 12:34:57.123  12345-12345  E  ApiService        Network error
+```
+
+## Filtering Logs
+
+### By Log Level
+
+Filter to show only specific severity levels:
+
+- **Show All** - Display all log levels
+- **Verbose+** - Verbose and above
+- **Debug+** - Debug and above (most common)
+- **Info+** - Info and above
+- **Warn+** - Warnings and errors only
+- **Error** - Errors only
+
+### By Tag
+
+Filter logs by application or component tag:
+
+<CodeGroup>
+```bash Filter by Tag
+# Show only logs from specific tag
+adb logcat -s MainActivity
+
+# Multiple tags
+adb logcat -s MainActivity:D NetworkManager:D
+```
+
+```bash Tag Patterns
+# Show logs matching pattern
+adb logcat | grep "MyApp"
+
+# Exclude specific tags
+adb logcat | grep -v "System"
+```
+</CodeGroup>
+
+### By Package
+
+Show only logs from your application:
+
+```bash Filter by Package
+# Show only your app's logs
+adb logcat --pid=$(adb shell pidof -s com.yourapp.package)
+
+# Alternative using package name
+adb logcat | grep $(adb shell ps | grep com.yourapp.package | awk '{print $2}')
+```
+
+<Tip>
+The IDE automatically filters logs to show only your application's output by default.
+</Tip>
+
+### By Text Search
+
+Search for specific text in log messages:
+
+- Use the search box in the log panel
+- Supports case-sensitive and regex search
+- Highlights matching text
+
+## Command Line Access
+
+### Using Logcat
+
+Access logs via terminal:
+
+<CodeGroup>
+```bash Basic Logcat
+# View all logs
+logcat
+
+# View with timestamps
+logcat -v time
+
+# View with thread info
+logcat -v threadtime
+```
+
+```bash Filtered Logcat
+# Filter by priority
+logcat *:E        # Errors only
+logcat *:W        # Warnings and above
+logcat *:D        # Debug and above
+
+# Filter by tag and priority
+logcat MainActivity:D *:S
+```
+
+```bash Save Logs
+# Save to file
+logcat > app_logs.txt
+
+# Save with timestamp
+logcat -v time > logs_$(date +%Y%m%d_%H%M%S).txt
+
+# Continuous logging
+logcat -f /sdcard/logcat.txt
+```
+</CodeGroup>
+
+### Log Formats
+
+Different output formats:
+
+```bash Format Options
+# Brief (default)
+logcat -v brief
+I/MainActivity(12345): App started
+
+# Threadtime (most detailed)
+logcat -v threadtime
+03-08 12:34:56.789 12345 12345 I MainActivity: App started
+
+# Tag (tag and priority only)
+logcat -v tag
+I/MainActivity: App started
+```
+
+## IDE Logging System
+
+The IDE uses a custom logging framework:
+
+### Logger Classes
+
+<CodeGroup>
+```kotlin IDE Logger
+import com.tom.rv2ide.utils.ILogger
+import org.slf4j.LoggerFactory
+
+class MyComponent {
+    private val log = LoggerFactory.getLogger(MyComponent::class.java)
+    
+    fun doWork() {
+        log.debug("Starting work...")
+        log.info("Work completed successfully")
+        log.error("Work failed", exception)
+    }
+}
+```
+
+```java Java Logger
+import com.tom.rv2ide.utils.ILogger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class MyComponent {
+    private static final Logger log = LoggerFactory.getLogger(MyComponent.class);
+    
+    public void doWork() {
+        log.debug("Starting work...");
+        log.info("Work completed");
+    }
+}
+```
+</CodeGroup>
+
+### Log Appenders
+
+The IDE logging system includes:
+
+- **LogcatAppender** - Sends logs to Android logcat
+- **StdErrAppender** - Outputs to standard error
+- **JvmStdErrAppender** - For JVM-based tools
+
+### Log Format
+
+IDE logs use a custom format:
+
+```bash IDE Log Format
+[ThreadTime] [Level] [Tag]: Message
+[12:34:56.789] [INFO] [BuildService]: Build started
+[12:34:58.123] [ERROR] [CompilerService]: Compilation failed
+```
+
+## Remote Logging
+
+### Log Sender Service
+
+For running applications on devices:
+
+<Note>
+The LogSender service allows applications to send logs back to the IDE over a local socket connection.
+</Note>
+
+<CodeGroup>
+```kotlin Enable Log Sender
+// In your Application class
+import com.tom.rv2ide.logsender.LogSenderService
+
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        
+        // Start log sender for IDE integration
+        LogSenderService.start(this)
+    }
+}
+```
+
+```java Java Implementation
+import com.tom.rv2ide.logsender.LogSenderService;
+
+public class MyApplication extends Application {
+    @Override
+    public void onCreate() {
+        super.onCreate();
+        
+        // Start log sender
+        LogSenderService.start(this);
+    }
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<Tip>
+**Logging Guidelines**
+
+**Use Appropriate Levels:**
+- **Verbose** - Only for detailed debugging, disabled in production
+- **Debug** - Development debugging, disabled in release
+- **Info** - Important runtime events
+- **Warning** - Potential issues that don't crash the app
+- **Error** - Errors and exceptions that need attention
+
+**Tag Naming:**
+- Use class name as tag for easy filtering
+- Keep tags under 23 characters (Android limit)
+- Use consistent naming conventions
+
+**Message Content:**
+- Include relevant context in messages
+- Log method parameters for debugging
+- Include exception details with error logs
+- Avoid logging sensitive information (passwords, tokens, PII)
+
+**Performance:**
+- Guard verbose/debug logs with `if (BuildConfig.DEBUG)`
+- Avoid string concatenation in log calls
+- Use string formatting: `Log.d(TAG, "Value: %d", value)`
+</Tip>
+
+## Troubleshooting
+
+### Logs Not Appearing
+
+If logs aren't showing:
+
+<Steps>
+  <Step title="Check Log Level">
+    Ensure the log level filter isn't hiding your messages
+  </Step>
+  
+  <Step title="Verify Tag Filter">
+    Clear any tag filters that might exclude your logs
+  </Step>
+  
+  <Step title="Check Application State">
+    Ensure your application is running
+  </Step>
+  
+  <Step title="Restart Logcat">
+    Clear and restart the log reader
+  </Step>
+</Steps>
+
+### Buffer Overflow
+
+If logs are missing due to buffer overflow:
+
+```bash Increase Buffer Size
+# Set larger logcat buffer (requires root/adb)
+adb logcat -G 16M
+
+# Check current buffer size
+adb logcat -g
+```
+
+### Too Many Logs
+
+If overwhelmed by log output:
+
+- Use more restrictive filters (Debug+ or Info+)
+- Filter by specific tags
+- Reduce verbose logging in your code
+- Use search to find specific messages
+
+### Log Formatting Issues
+
+For better formatted logs:
+
+```kotlin Structured Logging
+log.debug(
+    """Request completed:
+    |  URL: $url
+    |  Status: $statusCode
+    |  Duration: ${duration}ms
+    """.trimMargin()
+)
+```
+
+## Advanced Features
+
+### Log Statistics
+
+View log statistics:
+
+```bash Logcat Statistics
+# Show log statistics
+adb logcat -S
+
+# Output:
+# Total: 12345 messages
+# Main: 8000 messages
+# System: 3000 messages
+# Crash: 45 messages
+```
+
+### Log Rotation
+
+Automatic log rotation:
+
+```bash Rotating Log Files
+# Write logs with rotation
+adb logcat -f /sdcard/logcat.txt -r 1024 -n 10
+# -r: rotate at 1MB
+# -n: keep 10 files
+```
+
+### Real-Time Monitoring
+
+Monitor specific patterns:
+
+<CodeGroup>
+```bash Watch for Errors
+# Monitor for errors in real-time
+adb logcat | grep -E "ERROR|FATAL"
+```
+
+```bash Watch Specific Component
+# Monitor specific class
+adb logcat | grep "MainActivity"
+```
+
+```bash Color-Coded Output
+# Use color for different levels (requires terminal support)
+adb logcat -v color
+```
+</CodeGroup>
+
+<Tip>
+Use log monitoring during testing to catch issues immediately as they occur.
+</Tip>
+
+## Integration with IDE
+
+The Log Reader integrates with other IDE features:
+
+- **Click on error lines** - Jump to source code location
+- **Stack trace parsing** - Navigate through exception stack traces
+- **Build integration** - Automatically show build logs during compilation
+- **Run configuration** - Capture app output during execution
+
+<Note>
+The IDE intelligently parses log output to provide clickable links to source files and line numbers.
+</Note>

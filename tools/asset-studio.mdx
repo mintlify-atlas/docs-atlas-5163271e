@@ -1,0 +1,438 @@
+---
+title: Asset Studio
+description: Generate Android app icons and image assets for all screen densities
+icon: image
+---
+
+The Asset Studio is a powerful tool for creating Android launcher icons, notification icons, and other image assets in all required densities and formats.
+
+## Overview
+
+Asset Studio helps you:
+
+- Generate launcher icons for all densities (mdpi to xxxhdpi)
+- Import icons from Material Icons library
+- Create icons from custom images or vector drawables
+- Customize icon shapes, colors, and sizes
+- Export to drawable or mipmap directories
+- Preview icons before generation
+
+<Note>
+Asset Studio supports both bitmap images (PNG, JPEG) and vector drawables (XML).
+</Note>
+
+## Opening Asset Studio
+
+Access Asset Studio from:
+
+1. **Main Menu** - Tools > Asset Studio
+2. **Resource Manager** - Right-click > New Image Asset
+3. **Project Context Menu** - res folder > New > Image Asset
+
+## Image Sources
+
+### Import from Image File
+
+Use your own image as the icon source:
+
+<Steps>
+  <Step title="Select Image">
+    Tap "Select Image" button
+  </Step>
+  
+  <Step title="Choose File">
+    Browse and select a PNG or JPEG file from your device
+  </Step>
+  
+  <Step title="Preview">
+    The image appears in the preview area
+  </Step>
+</Steps>
+
+<Tip>
+**Recommended source image size:** 512x512 pixels or larger for best quality
+</Tip>
+
+### Import from Vector XML
+
+Use Android vector drawable XML files:
+
+<Steps>
+  <Step title="Select XML">
+    Tap "Select XML" button
+  </Step>
+  
+  <Step title="Choose XML File">
+    Select a vector drawable XML file
+  </Step>
+  
+  <Step title="Parse Vector">
+    Asset Studio parses and renders the vector drawable
+  </Step>
+</Steps>
+
+<CodeGroup>
+```xml Example Vector XML
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2z"/>
+</vector>
+```
+
+```xml Material Icon Example
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M9,11H7v2h2V11zM13,11h-2v2h2V11zM17,11h-2v2h2V11z"/>
+</vector>
+```
+</CodeGroup>
+
+### Paste Vector XML
+
+Directly paste vector drawable XML:
+
+<Steps>
+  <Step title="Open Paste Dialog">
+    Tap "Paste XML" or use the Material Icons option
+  </Step>
+  
+  <Step title="Paste XML Content">
+    Paste the complete `<vector>` XML content
+  </Step>
+  
+  <Step title="Import">
+    Tap "Import" to load the vector
+  </Step>
+</Steps>
+
+<Tip>
+Copy vector drawables from Material Icons, Iconify, or other icon libraries and paste directly.
+</Tip>
+
+## Customization Options
+
+### Icon Shape
+
+Choose from three icon shapes:
+
+- **Circle** - Round icons for a classic look
+- **Square** - Sharp corners for a modern style
+- **Rounded Square** - Adjustable corner radius
+
+<Note>
+For Android 8.0+ adaptive icons, the shape is applied as the background layer.
+</Note>
+
+### Background Color
+
+Customize the icon background:
+
+<Steps>
+  <Step title="Open Color Picker">
+    Tap the "Color Picker" button
+  </Step>
+  
+  <Step title="Choose from Presets">
+    Select from Material Design color presets
+  </Step>
+  
+  <Step title="Custom Color">
+    Enter a custom hex color code (#RRGGBB or #AARRGGBB)
+  </Step>
+  
+  <Step title="Apply">
+    Tap "Apply" to update the preview
+  </Step>
+</Steps>
+
+**Popular color presets:**
+- Material Primary colors
+- Brand colors
+- Gradients (future support)
+
+<CodeGroup>
+```bash Color Formats
+#FF6200EE  // Material Purple (with alpha)
+#03DAC5    // Material Teal
+#FF0000    // Red
+#00FF00    // Green
+```
+</CodeGroup>
+
+### Foreground Scale
+
+Adjust the size of the icon within the background:
+
+- **Range:** 0% to 100%
+- **Default:** 90%
+- **Recommended:** 70-100% depending on icon complexity
+
+<Tip>
+Smaller, detailed icons look better at 90-100%. Large, bold icons work well at 70-80%.
+</Tip>
+
+### Rounded Corners
+
+For rounded square shapes:
+
+- **Range:** 0% to 50%
+- **0%** - Square corners
+- **25%** - Slightly rounded
+- **50%** - Fully rounded (circle)
+
+## Preview
+
+Preview your icon in real-time:
+
+- Main preview shows 512x512 size
+- Updates automatically as you adjust settings
+- Tap "Preview" button for full-screen view
+
+<Note>
+The preview accurately represents how the icon will appear after generation.
+</Note>
+
+## Generating Assets
+
+### Configure Output
+
+<Steps>
+  <Step title="Set Icon Name">
+    Enter a name for your icon (e.g., `ic_launcher`, `ic_notification`)
+  </Step>
+  
+  <Step title="Choose Directory">
+    Select output location: `drawable` or `mipmap`
+  </Step>
+  
+  <Step title="Generate">
+    Tap "Generate" button
+  </Step>
+</Steps>
+
+**Directory Guidelines:**
+- **mipmap/** - Use for launcher icons (recommended)
+- **drawable/** - Use for other icons and images
+
+### Generated Densities
+
+Asset Studio generates icons for all density buckets:
+
+| Density | Size (launcher) | Directory |
+|---------|----------------|----------|
+| mdpi | 48x48 px | mipmap-mdpi |
+| hdpi | 72x72 px | mipmap-hdpi |
+| xhdpi | 96x96 px | mipmap-xhdpi |
+| xxhdpi | 144x144 px | mipmap-xxhdpi |
+| xxxhdpi | 192x192 px | mipmap-xxxhdpi |
+| baseline | 96x96 px | mipmap |
+
+<CodeGroup>
+```bash Generated Output Structure
+app/src/main/res/
+├── mipmap/
+│   └── ic_launcher.png (96x96)
+├── mipmap-mdpi/
+│   └── ic_launcher.png (48x48)
+├── mipmap-hdpi/
+│   └── ic_launcher.png (72x72)
+├── mipmap-xhdpi/
+│   └── ic_launcher.png (96x96)
+├── mipmap-xxhdpi/
+│   └── ic_launcher.png (144x144)
+└── mipmap-xxxhdpi/
+    └── ic_launcher.png (192x192)
+```
+</CodeGroup>
+
+<Tip>
+All icons are generated as PNG files with transparency support.
+</Tip>
+
+## Icon Types
+
+### Launcher Icons
+
+Main app icons shown on the home screen:
+
+```xml AndroidManifest.xml
+<application
+    android:icon="@mipmap/ic_launcher"
+    android:roundIcon="@mipmap/ic_launcher_round"
+    ...>
+```
+
+**Requirements:**
+- 512x512 source recommended
+- Square or rounded shape
+- Clear, recognizable design
+- Works on light and dark backgrounds
+
+### Notification Icons
+
+Icons for status bar notifications:
+
+```kotlin Notification Icon Usage
+val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+    .setSmallIcon(R.drawable.ic_notification)
+    .setContentTitle("Notification Title")
+    .build()
+```
+
+**Requirements:**
+- Silhouette style (single color + transparency)
+- 24x24 dp (72x72 xxxhdpi)
+- Simple, clear design
+- White foreground, transparent background
+
+### Action Bar Icons
+
+Icons for toolbar and action bar:
+
+**Requirements:**
+- 24x24 dp base size
+- Material Design style
+- Consistent with app theme
+
+## Best Practices
+
+<Tip>
+**Source Images**
+- Use high-resolution source images (512x512+)
+- Vector sources scale better than bitmaps
+- Ensure sufficient contrast with background
+
+**Design Guidelines**
+- Follow Material Design icon guidelines
+- Keep designs simple and recognizable
+- Test on different devices and Android versions
+- Avoid small text or fine details
+
+**File Management**
+- Use descriptive icon names (ic_feature_name)
+- Keep icon sets consistent
+- Remove unused icons to reduce APK size
+
+**Testing**
+- Preview on actual devices when possible
+- Test on light and dark system themes
+- Verify all densities look correct
+</Tip>
+
+## Advanced Features
+
+### Vector Drawable Parsing
+
+Asset Studio intelligently parses vector XML:
+
+- Supports `<path>` elements with pathData
+- Handles fillColor and strokeColor
+- Respects viewportWidth/Height
+- Scales to target size automatically
+
+```xml Supported Vector Features
+<vector ...>
+    <path
+        android:pathData="..."          <!-- Path commands -->
+        android:fillColor="#000000"      <!-- Fill color -->
+        android:strokeColor="#FFFFFF"    <!-- Stroke color -->
+        android:strokeWidth="2"/>        <!-- Stroke width -->
+</vector>
+```
+
+### Color Customization
+
+Advanced color options:
+
+- Hex color input with alpha channel
+- Color presets from Material palette
+- Real-time preview of color changes
+- Color persistence across sessions
+
+### Batch Generation
+
+Generate multiple icon variants:
+
+1. Create different color variations
+2. Generate with different shapes
+3. Export multiple icon sets
+
+## Troubleshooting
+
+### Image Not Loading
+
+If images fail to load:
+
+- Check file format (PNG, JPEG, or XML only)
+- Verify file permissions
+- Try a different image
+- Ensure sufficient storage space
+
+### Vector XML Parse Errors
+
+If vector XML fails to parse:
+
+<Warning>
+Ensure the XML is valid Android vector drawable syntax.
+</Warning>
+
+```xml Valid Vector Structure
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- path elements here -->
+</vector>
+```
+
+### Generation Failures
+
+If icon generation fails:
+
+<Steps>
+  <Step title="Check Project">
+    Ensure a project is open
+  </Step>
+  
+  <Step title="Verify Permissions">
+    Check write permissions to res/ directory
+  </Step>
+  
+  <Step title="Check Space">
+    Ensure sufficient storage for generated files
+  </Step>
+  
+  <Step title="Retry">
+    Close and reopen Asset Studio, then try again
+  </Step>
+</Steps>
+
+### Preview Rendering Issues
+
+If preview doesn't render correctly:
+
+- Restart Asset Studio
+- Try a different icon shape
+- Adjust foreground scale
+- Check source image quality
+
+## Resource Links
+
+<Tip>
+**Icon Resources:**
+- [Material Icons](https://fonts.google.com/icons) - Google's official icon library
+- [Material Design Guidelines](https://material.io/design/iconography) - Icon design principles
+- [Android Icon Guidelines](https://developer.android.com/guide/practices/ui_guidelines/icon_design) - Platform-specific guidance
+</Tip>

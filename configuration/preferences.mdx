@@ -1,0 +1,334 @@
+---
+title: Preferences
+description: Configure Android Code Studio preferences and settings
+icon: sliders
+---
+
+Android Code Studio provides a comprehensive preferences system to customize the IDE behavior, appearance, and functionality.
+
+## Accessing Preferences
+
+Access preferences through:
+- **Settings Menu**: Navigate to Settings > Preferences
+- **Configuration Files**: Preferences are stored using Android's SharedPreferences system
+
+## General Preferences
+
+### Interface Configuration
+
+<ParamField path="idepref_general_uiMode" type="choice" default="System Default">
+  **UI Mode** - Controls the application theme
+  
+  Options:
+  - Light mode
+  - Dark mode
+  - System default (follows device settings)
+  
+  <Note>Changing UI mode requires an app restart to take effect.</Note>
+</ParamField>
+
+<ParamField path="idpref_general_theme" type="choice" default="DEFAULT">
+  **Theme Selector** - Choose from available IDE color themes
+  
+  Themes include various color schemes optimized for different preferences. Available themes are dynamically loaded from the IDE.
+  
+  <Warning>Changing themes requires restarting the application.</Warning>
+</ParamField>
+
+<ParamField path="idepref_general_snowfall" type="boolean" default="true">
+  **Snowfall Overlay** - Enable or disable decorative snowfall effect
+  
+  <Note>Requires app restart when changed.</Note>
+</ParamField>
+
+<ParamField path="idpref_general_locale" type="choice" default="null">
+  **Language Selection** - Choose the IDE display language
+  
+  Options:
+  - System default (null)
+  - Supported locales from LocaleProvider
+  
+  The IDE supports multiple languages through Crowdin translations.
+</ParamField>
+
+### Project Configuration
+
+<ParamField path="idepref_general_autoOpenProjects" type="boolean" default="true">
+  **Auto-Open Projects** - Automatically open the last opened project on startup
+  
+  When enabled, the IDE will restore your previous project session automatically.
+</ParamField>
+
+<ParamField path="idepref_general_confirmProjectOpen" type="boolean" default="false">
+  **Confirm Project Open** - Show confirmation dialog when opening projects
+  
+  Useful for preventing accidental project switches.
+</ParamField>
+
+<ParamField path="ide_last_project" type="string" default="<NO_OPENED_PROJECT>">
+  **Last Opened Project** - Path to the most recently opened project
+  
+  This is automatically managed by the IDE.
+</ParamField>
+
+### Terminal Configuration
+
+<ParamField path="idepref_general_terminalShell" type="boolean" default="false">
+  **Use System Shell** - Use system shell instead of Termux login shell
+  
+  When enabled, the terminal uses the system's default shell environment instead of the Termux-provided bash shell.
+</ParamField>
+
+## Editor Preferences
+
+### Common Editor Settings
+
+<ParamField path="idepref_editor_fontSize" type="float" default="14.0">
+  **Font Size** - Editor text size in pixels
+  
+  Range: 6.0 - 32.0 pixels
+  
+  Adjust for comfortable reading on your device.
+</ParamField>
+
+<ParamField path="idepref_editor_tabSize" type="integer" default="4">
+  **Tab Size** - Number of spaces per tab character
+  
+  Options: 2, 4, 6, or 8 spaces
+</ParamField>
+
+<ParamField path="idepref_editor_useSoftTab" type="boolean" default="true">
+  **Use Soft Tabs** - Insert spaces instead of tab characters
+  
+  When enabled, pressing Tab inserts spaces according to the tab size setting.
+</ParamField>
+
+<ParamField path="idepref_editor_colorScheme" type="string" default="default">
+  **Color Scheme** - Syntax highlighting color scheme
+  
+  Available schemes are provided by IDEColorSchemeProvider. Each scheme offers different syntax highlighting colors optimized for readability.
+</ParamField>
+
+<ParamField path="idepref_editor_fontLigatures" type="boolean" default="true">
+  **Font Ligatures** - Enable programming ligatures (e.g., `!=`, `=>`, `<=`)
+  
+  Requires a font that supports ligatures. Default font is JetBrains Mono.
+</ParamField>
+
+<ParamField path="idepref_selected_custom_font" type="string" default="null">
+  **Custom Font** - Use a custom font file for the editor
+  
+  Font files (.ttf, .otf) should be placed in `~/.androidide/ui/` directory. Select from available fonts or add new ones.
+  
+  Default: JetBrains Mono (embedded)
+</ParamField>
+
+<ParamField path="auto_save_enabled" type="boolean" default="true">
+  **Auto Save** - Automatically save files when switching tabs or closing
+  
+  Helps prevent data loss from unexpected app closures.
+</ParamField>
+
+<ParamField path="idepref_editor_autoSave" type="boolean" default="false">
+  **Auto Save (Periodic)** - Automatically save files at regular intervals
+</ParamField>
+
+<ParamField path="idepref_editor_show_keyboard_suggestions" type="boolean" default="true">
+  **Keyboard Suggestions** - Show keyboard autocomplete suggestions
+</ParamField>
+
+<ParamField path="idepref_editor_word_wrap" type="boolean" default="false">
+  **Word Wrap** - Wrap long lines to fit screen width
+</ParamField>
+
+<ParamField path="idepref_editor_use_magnifier" type="boolean" default="true">
+  **Use Magnifier** - Show magnifying glass when selecting text
+</ParamField>
+
+<ParamField path="idepref_editor_useIcu" type="boolean" default="false">
+  **Use ICU** - Use ICU library for text segmentation
+  
+  Improves word selection and navigation for non-Latin scripts.
+</ParamField>
+
+<ParamField path="idepref_editor_flagPassword" type="boolean" default="true">
+  **Visible Password Flag** - Show password visibility toggle in password fields
+</ParamField>
+
+<ParamField path="idepref_editor_deleteEmptyLines" type="boolean" default="true">
+  **Delete Empty Lines** - Remove empty lines when pressing backspace
+</ParamField>
+
+<ParamField path="idepref_editor_deleteTab" type="boolean" default="true">
+  **Delete Tabs on Backspace** - Delete entire tab width when pressing backspace
+</ParamField>
+
+<ParamField path="idepref_editor_stickyScrollEnabled" type="boolean" default="false">
+  **Sticky Scroll** - Keep function/class headers visible when scrolling
+</ParamField>
+
+<ParamField path="idepref_editor_pinLineNumbers" type="boolean" default="true">
+  **Pin Line Numbers** - Keep line numbers visible when scrolling horizontally
+</ParamField>
+
+<ParamField path="idepref_editor_completions_matchLower" type="boolean" default="false">
+  **Match Lowercase** - Match completions case-insensitively
+</ParamField>
+
+### Non-Printable Characters
+
+Control the visualization of whitespace and special characters:
+
+<ParamField path="idepref_editor_wsLeading" type="boolean" default="false">
+  **Show Leading Whitespace** - Display leading spaces and tabs
+</ParamField>
+
+<ParamField path="idepref_editor_wsTrailing" type="boolean" default="false">
+  **Show Trailing Whitespace** - Display trailing spaces and tabs
+</ParamField>
+
+<ParamField path="idepref_editor_wsInner" type="boolean" default="false">
+  **Show Inner Whitespace** - Display spaces between words
+</ParamField>
+
+<ParamField path="idepref_editor_wsEmptyLine" type="boolean" default="false">
+  **Show Empty Line Whitespace** - Display whitespace on empty lines
+</ParamField>
+
+<ParamField path="idepref_editor_lineBreak" type="boolean" default="false">
+  **Show Line Breaks** - Display line break symbols
+</ParamField>
+
+### Java-Specific Settings
+
+<ParamField path="idepref_java_useGoogleStyle" type="boolean" default="true">
+  **Google Code Style** - Use Google Java code style for formatting
+  
+  When enabled, code formatting follows Google's Java style guide.
+</ParamField>
+
+<ParamField path="idepref_java_diagnosticEnabled" type="boolean" default="true">
+  **Java Diagnostics** - Enable real-time error checking for Java files
+  
+  Provides inline error and warning messages while editing.
+</ParamField>
+
+## Build & Run Preferences
+
+### Gradle Options
+
+<ParamField path="ide.build.enableBuildOutput" type="boolean" default="true">
+  **Enable Build Output** - Show detailed build output in the console
+</ParamField>
+
+<ParamField path="ide.build.enableDependenciesUpdater" type="boolean" default="true">
+  **Dependencies Updater** - Check for and notify about dependency updates
+</ParamField>
+
+<ParamField path="ide.build.enableKotlinIndexingNotification" type="boolean" default="true">
+  **Kotlin Indexing Notification** - Show notification during Kotlin project indexing
+</ParamField>
+
+### Gradle Command Options
+
+<ParamField path="idepref_gradleCmd_stacktrace" type="boolean" default="false">
+  **--stacktrace** - Include stack traces in build output
+</ParamField>
+
+<ParamField path="idepref_gradleCmd_info" type="boolean" default="true (first build)">
+  **--info** - Show informational log messages
+</ParamField>
+
+<ParamField path="idepref_gradleCmd_debug" type="boolean" default="false">
+  **--debug** - Show debug log messages
+</ParamField>
+
+<ParamField path="idepref_gradleCmd_scan" type="boolean" default="false">
+  **--scan** - Create a build scan
+</ParamField>
+
+<ParamField path="idepref_gradleCmd_warningMode" type="boolean" default="false">
+  **--warning-mode all** - Show all warnings
+</ParamField>
+
+<ParamField path="idepref_gradleCmd_buildCache" type="boolean" default="false">
+  **--build-cache** - Enable Gradle build cache
+</ParamField>
+
+<ParamField path="idepref_gradleCmd_offlineMode" type="boolean" default="false">
+  **--offline** - Build without network access
+</ParamField>
+
+<ParamField path="idepref_build_customGradleInstallation" type="string" default="">
+  **Custom Gradle Installation** - Path to custom Gradle distribution
+  
+  Leave empty to use the Gradle wrapper specified in the project.
+</ParamField>
+
+### Run Options
+
+<ParamField path="ide.build.run.installViaShizuku" type="boolean" default="false">
+  **Install via Shizuku** - Use Shizuku for APK installation
+  
+  Requires Shizuku service to be running. Provides faster installation without manual confirmation.
+</ParamField>
+
+<ParamField path="ide.build.run.launchAppAfterInstall" type="boolean" default="true">
+  **Launch App After Install** - Automatically launch the app after successful installation
+</ParamField>
+
+## Developer Options
+
+<ParamField path="idepref_ide_logs_enabled" type="boolean" default="false">
+  **IDE Logs** - Enable detailed IDE logging for troubleshooting
+  
+  <Warning>This may impact performance and is intended for debugging purposes.</Warning>
+</ParamField>
+
+## Configuration File Location
+
+Preferences are stored in Android's SharedPreferences system:
+- **Location**: `/data/data/com.tom.rv2ide/shared_prefs/`
+- **Format**: XML-based SharedPreferences
+- **Access**: Through PreferenceManager in the IDE
+
+## Resetting Preferences
+
+To reset preferences:
+
+<Steps>
+  <Step title="Via Settings">
+    Navigate to Settings > About > Reset Preferences
+  </Step>
+  
+  <Step title="Manual Reset">
+    Clear app data through Android system settings:
+    
+    Settings > Apps > Android Code Studio > Storage > Clear Data
+    
+    <Warning>This will reset all preferences and remove cached data.</Warning>
+  </Step>
+</Steps>
+
+## Best Practices
+
+<Tip>
+  **Performance Optimization**
+  - Disable features you don't use (magnifier, sticky scroll, etc.)
+  - Reduce font size on smaller devices
+  - Enable build cache for faster builds
+</Tip>
+
+<Tip>
+  **Code Quality**
+  - Enable Google Code Style for Java projects
+  - Enable diagnostics for real-time error checking
+  - Use appropriate tab size matching your project conventions
+</Tip>
+
+<Tip>
+  **Workflow Efficiency**
+  - Enable auto-save to prevent data loss
+  - Configure Gradle commands based on your debugging needs
+  - Use auto-open projects for quick access
+</Tip>

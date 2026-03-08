@@ -1,0 +1,721 @@
+---
+title: Action System
+description: APIs for registering and executing extensible actions throughout the IDE
+---
+
+The Action System provides a flexible framework for adding custom commands, menu items, and toolbar actions to Android Code Studio.
+
+## Core Interfaces
+
+### ActionsRegistry
+
+The main registry for managing actions throughout the IDE.
+
+**Source**: `core/actions/src/main/java/com/tom/rv2ide/actions/ActionsRegistry.kt:24`
+
+```kotlin
+package com.tom.rv2ide.actions
+
+abstract class ActionsRegistry {
+  
+  // Action registration
+  abstract fun registerAction(action: ActionItem): Boolean
+  abstract fun unregisterAction(action: ActionItem): Boolean
+  abstract fun unregisterAction(id: String): Boolean
+  
+  // Action queries
+  abstract fun findAction(location: ActionItem.Location, id: String): ActionItem?
+  abstract fun findAction(location: ActionItem.Location, itemId: Int): ActionItem?
+  abstract fun getActions(location: ActionItem.Location): Map<String, ActionItem>
+  
+  // Menu operations
+  abstract fun fillMenu(params: FillMenuParams)
+  abstract fun clearActions(location: ActionItem.Location)
+  
+  // Listeners
+  abstract fun registerActionExecListener(listener: ActionExecListener)
+  abstract fun unregisterActionExecListener(listener: ActionExecListener)
+  
+  companion object {
+    fun getInstance(): ActionsRegistry
+  }
+  
+  interface ActionExecListener {
+    fun onExec(action: ActionItem, result: Any)
+  }
+}
+```
+
+### ActionItem
+
+Interface for defining custom actions.
+
+**Source**: `core/actions/src/main/java/com/tom/rv2ide/actions/ActionItem.kt:35`
+
+```kotlin
+package com.tom.rv2ide.actions
+
+import android.graphics.ColorFilter
+import android.graphics.drawable.Drawable
+import android.view.View
+
+interface ActionItem {
+  
+  // Identity
+  val id: String
+  val itemId: Int get() = id.hashCode()
+  
+  // Display properties
+  var label: String
+  var subtitle: String?
+  var icon: Drawable?
+  var visible: Boolean
+  var enabled: Boolean
+  
+  // Behavior
+  var requiresUIThread: Boolean
+  var location: Location
+  val order: Int get() = -1
+  
+  // Lifecycle methods
+  fun prepare(data: ActionData)
+  suspend fun execAction(data: ActionData): Any
+  fun postExec(data: ActionData, result: Any)
+  fun destroy()
+  
+  // UI customization
+  fun getShowAsActionFlags(data: ActionData): Int
+  fun createActionView(data: ActionData): View?
+  fun createColorFilter(data: ActionData): ColorFilter?
+  
+  enum class Location(val id: String) {
+    EDITOR_TOOLBAR("ide.editor.toolbar"),
+    EDITOR_SIDEBAR("ide.editor.sidebar"),
+    EDITOR_SIDEBAR_DEFAULT_ITEMS("ide.editor.sidebar.defaultItems"),
+    EDITOR_TEXT_ACTIONS("ide.editor.textActions"),
+    EDITOR_CODE_ACTIONS("ide.editor.codeActions"),
+    EDITOR_FILE_TABS("ide.editor.fileTabs"),
+    EDITOR_FILE_TREE("ide.editor.fileTree"),
+    UI_DESIGNER_TOOLBAR("ide.uidesigner.toolbar")
+  }
+}
+```
+
+### ActionData
+
+Container for passing data to actions.
+
+**Source**: `core/actions/src/main/java/com/tom/rv2ide/actions/ActionData.java:30`
+
+```java
+package com.tom.rv2ide.actions;
+
+import java.util.Map;
+
+public class ActionData {
+  
+  public <T> void put(Class<T> type, T object);
+  public <T> T get(Class<T> type);
+  public void clear();
+}
+```
+
+## Creating Actions
+
+### Basic Action Implementation
+
+Create a simple action:
+
+```kotlin
+import com.tom.rv2ide.actions.ActionItem
+import com.tom.rv2ide.actions.ActionData
+import android.graphics.drawable.Drawable
+
+class MyCustomAction : ActionItem {
+  
+  override val id = "my.custom.action"
+  override var label = "My Action"
+  override var subtitle: String? = "Performs custom operation"
+  override var icon: Drawable? = null
+  override var visible = true
+  override var enabled = true
+  override var requiresUIThread = false
+  override var location = ActionItem.Location.EDITOR_TOOLBAR
+  
+  override fun prepare(data: ActionData) {
+    // Update action state before showing
+    enabled = isActionAvailable(data)
+    visible = shouldShowAction(data)
+  }
+  
+  override suspend fun execAction(data: ActionData): Any {
+    // Perform the action
+    println("Executing my custom action")
+    
+    // Access context data
+    val editor = data.get(IEditor::class.java)
+    val file = editor?.getFile()
+    
+    if (file != null) {
+      // Do something with the file
+      processFile(file)
+      return true
+    }
+    
+    return false
+  }
+  
+  override fun postExec(data: ActionData, result: Any) {
+    // Run on UI thread after execution
+    if (result == true) {
+      showSuccessMessage("Action completed successfully")
+    }
+  }
+  
+  private fun isActionAvailable(data: ActionData): Boolean {
+    // Check if action should be enabled
+    return data.get(IEditor::class.java) != null
+  }
+  
+  private fun shouldShowAction(data: ActionData): Boolean {
+    // Check if action should be visible
+    return true
+  }
+}
+```
+
+### Editor Action
+
+Create an action specific to the editor:
+
+```kotlin
+import com.tom.rv2ide.actions.EditorActionItem
+import com.tom.rv2ide.editor.api.IEditor
+
+class FormatCodeAction : EditorActionItem() {
+  
+  override val id = "editor.format.code"
+  override var label = "Format Code"
+  override val order = 100
+  
+  init {
+    location = ActionItem.Location.EDITOR_TOOLBAR
+    requiresUIThread = false
+  }
+  
+  override fun prepare(data: ActionData) {
+    super.prepare(data)
+    
+    val editor = data.get(IEditor::class.java)
+    enabled = editor != null && editor.getFile() != null
+  }
+  
+  override suspend fun execAction(data: ActionData): Any {
+    val editor = requireEditor(data)
+    val file = editor.getFile() ?: return false
+    
+    // Format the code
+    val lspEditor = data.get(ILspEditor::class.java)
+    lspEditor?.let {
+      val params = FormatCodeParams(
+        file = file.toPath(),
+        content = editor.text.toString()
+      )
+      val result = languageServer.formatCode(params)
+      
+      if (result.isFormatted) {
+        applyEdits(editor, result.edits)
+        return true
+      }
+    }
+    
+    return false
+  }
+  
+  override fun postExec(data: ActionData, result: Any) {
+    if (result == true) {
+      showMessage("Code formatted successfully")
+    }
+  }
+}
+```
+
+### Sidebar Action
+
+Create a sidebar navigation action:
+
+```kotlin
+import com.tom.rv2ide.actions.SidebarActionItem
+
+class ProjectStructureAction : SidebarActionItem() {
+  
+  override val id = "sidebar.project.structure"
+  override var label = "Structure"
+  override val order = 10
+  
+  init {
+    location = ActionItem.Location.EDITOR_SIDEBAR
+    icon = loadIcon(R.drawable.ic_structure)
+  }
+  
+  override suspend fun execAction(data: ActionData): Any {
+    // Show project structure panel
+    val activity = data.get(Activity::class.java)
+    activity?.let {
+      showProjectStructurePanel(it)
+      return true
+    }
+    return false
+  }
+}
+```
+
+## Registering Actions
+
+### Register with Registry
+
+Add your action to the IDE:
+
+```kotlin
+import com.tom.rv2ide.actions.ActionsRegistry
+
+val registry = ActionsRegistry.getInstance()
+val myAction = MyCustomAction()
+
+val registered = registry.registerAction(myAction)
+if (registered) {
+  println("Action registered successfully")
+} else {
+  println("Failed to register action")
+}
+```
+
+### Unregister Actions
+
+Remove actions when no longer needed:
+
+```kotlin
+// Unregister by action instance
+registry.unregisterAction(myAction)
+
+// Or by action ID
+registry.unregisterAction("my.custom.action")
+```
+
+### Clear Location Actions
+
+Remove all actions from a specific location:
+
+```kotlin
+registry.clearActions(ActionItem.Location.EDITOR_TOOLBAR)
+```
+
+## Action Locations
+
+### Available Locations
+
+Actions can be placed in various locations:
+
+```kotlin
+enum class Location {
+  // Editor activity toolbar
+  EDITOR_TOOLBAR,
+  
+  // Editor sidebar (navigation rail)
+  EDITOR_SIDEBAR,
+  
+  // Default items in sidebar
+  EDITOR_SIDEBAR_DEFAULT_ITEMS,
+  
+  // Text selection context menu
+  EDITOR_TEXT_ACTIONS,
+  
+  // Code actions submenu
+  EDITOR_CODE_ACTIONS,
+  
+  // File tab actions
+  EDITOR_FILE_TABS,
+  
+  // File tree context menu
+  EDITOR_FILE_TREE,
+  
+  // UI Designer toolbar
+  UI_DESIGNER_TOOLBAR
+}
+```
+
+### Location-Specific Actions
+
+Create actions for specific locations:
+
+```kotlin
+// Toolbar action
+class SaveAction : ActionItem {
+  override val id = "toolbar.save"
+  override var label = "Save"
+  init {
+    location = ActionItem.Location.EDITOR_TOOLBAR
+    icon = loadIcon(R.drawable.ic_save)
+  }
+}
+
+// Context menu action
+class RenameAction : ActionItem {
+  override val id = "filetree.rename"
+  override var label = "Rename"
+  init {
+    location = ActionItem.Location.EDITOR_FILE_TREE
+  }
+}
+
+// Code action
+class ExtractMethodAction : ActionItem {
+  override val id = "code.extract.method"
+  override var label = "Extract Method"
+  init {
+    location = ActionItem.Location.EDITOR_CODE_ACTIONS
+  }
+}
+```
+
+## Action Data
+
+### Accessing Context Data
+
+Retrieve data passed to actions:
+
+```kotlin
+override suspend fun execAction(data: ActionData): Any {
+  // Get editor instance
+  val editor = data.get(IEditor::class.java)
+  
+  // Get LSP editor
+  val lspEditor = data.get(ILspEditor::class.java)
+  
+  // Get activity
+  val activity = data.get(Activity::class.java)
+  
+  // Get project manager
+  val projectManager = data.get(IProjectManager::class.java)
+  
+  // Get selected file
+  val file = data.get(File::class.java)
+  
+  // Use the data
+  if (editor != null) {
+    val position = editor.getCursorLSPPosition()
+    // ...
+  }
+  
+  return true
+}
+```
+
+### Storing Custom Data
+
+Add your own data to ActionData:
+
+```kotlin
+val actionData = ActionData()
+actionData.put(String::class.java, "Custom value")
+actionData.put(MyData::class.java, MyData())
+
+// Later retrieve it
+val value = actionData.get(String::class.java)
+val myData = actionData.get(MyData::class.java)
+```
+
+## Action Preparation
+
+### Dynamic State Updates
+
+Update action state before display:
+
+```kotlin
+override fun prepare(data: ActionData) {
+  val editor = data.get(IEditor::class.java)
+  val file = editor?.getFile()
+  
+  // Enable only for Kotlin files
+  enabled = file?.extension == "kt"
+  
+  // Show only when text is selected
+  val selection = editor?.getCursorLSPRange()
+  visible = selection != null && !selection.isSamePosition()
+  
+  // Update label based on context
+  label = if (editor?.isModified() == true) {
+    "Save*"
+  } else {
+    "Save"
+  }
+}
+```
+
+### Conditional Visibility
+
+```kotlin
+override fun prepare(data: ActionData) {
+  val projectManager = data.get(IProjectManager::class.java)
+  val workspace = projectManager?.getWorkspace()
+  
+  // Only show if workspace is configured
+  visible = workspace != null
+  
+  // Only enable if no build is running
+  enabled = !isBuildRunning()
+}
+```
+
+## Action Execution
+
+### Background Execution
+
+Actions run in background by default:
+
+```kotlin
+override var requiresUIThread = false
+
+override suspend fun execAction(data: ActionData): Any {
+  // This runs on a background thread
+  val result = performLongRunningOperation()
+  return result
+}
+```
+
+### UI Thread Execution
+
+Force execution on UI thread:
+
+```kotlin
+override var requiresUIThread = true
+
+override suspend fun execAction(data: ActionData): Any {
+  // This runs on the UI thread
+  updateUI()
+  return true
+}
+```
+
+### Post-Execution Callback
+
+Handle results on UI thread:
+
+```kotlin
+override suspend fun execAction(data: ActionData): Any {
+  // Background work
+  val result = analyzeCode()
+  return result
+}
+
+override fun postExec(data: ActionData, result: Any) {
+  // Always runs on UI thread
+  if (result is AnalysisResult) {
+    showResults(result)
+  }
+}
+```
+
+## Action Listeners
+
+### Monitor Action Execution
+
+Listen for action execution events:
+
+```kotlin
+import com.tom.rv2ide.actions.ActionsRegistry
+
+class ActionMonitor : ActionsRegistry.ActionExecListener {
+  
+  override fun onExec(action: ActionItem, result: Any) {
+    println("Action executed: ${action.id}")
+    println("Result: $result")
+    
+    // Log analytics
+    logActionUsage(action.id, result)
+  }
+}
+
+// Register listener
+val registry = ActionsRegistry.getInstance()
+val monitor = ActionMonitor()
+registry.registerActionExecListener(monitor)
+
+// Unregister when done
+registry.unregisterActionExecListener(monitor)
+```
+
+## Menu Operations
+
+### Fill Menu with Actions
+
+Populate a menu with registered actions:
+
+```kotlin
+import com.tom.rv2ide.actions.FillMenuParams
+import android.view.Menu
+
+val menu: Menu = // obtain menu
+val actionData = ActionData()
+actionData.put(IEditor::class.java, currentEditor)
+
+val params = FillMenuParams(
+  menu = menu,
+  data = actionData,
+  location = ActionItem.Location.EDITOR_TEXT_ACTIONS
+)
+
+registry.fillMenu(params)
+```
+
+### Custom Action Views
+
+Provide custom views for actions:
+
+```kotlin
+override fun createActionView(data: ActionData): View? {
+  val context = data.get(Context::class.java) ?: return null
+  
+  // Create custom view
+  val customView = LayoutInflater.from(context)
+    .inflate(R.layout.custom_action, null)
+  
+  // Configure view
+  customView.findViewById<TextView>(R.id.label).text = label
+  
+  return customView
+}
+```
+
+## Complete Example
+
+Here's a complete action implementation:
+
+```kotlin
+import com.tom.rv2ide.actions.*
+import com.tom.rv2ide.editor.api.IEditor
+import com.tom.rv2ide.projects.IProjectManager
+import android.graphics.drawable.Drawable
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+class OrganizeImportsAction : ActionItem {
+  
+  override val id = "editor.organize.imports"
+  override var label = "Organize Imports"
+  override var subtitle: String? = "Remove unused and sort imports"
+  override var icon: Drawable? = null
+  override var visible = true
+  override var enabled = true
+  override var requiresUIThread = false
+  override var location = ActionItem.Location.EDITOR_CODE_ACTIONS
+  override val order = 50
+  
+  override fun prepare(data: ActionData) {
+    val editor = data.get(IEditor::class.java)
+    val file = editor?.getFile()
+    
+    // Only enable for Java/Kotlin files
+    enabled = file != null && 
+              (file.extension == "java" || file.extension == "kt")
+    
+    // Update label
+    label = when (file?.extension) {
+      "kt" -> "Organize Imports (Kotlin)"
+      "java" -> "Organize Imports (Java)"
+      else -> "Organize Imports"
+    }
+  }
+  
+  override suspend fun execAction(data: ActionData): Any {
+    val editor = data.get(IEditor::class.java) ?: return false
+    val file = editor.getFile() ?: return false
+    
+    // Perform analysis on background thread
+    val result = withContext(Dispatchers.IO) {
+      analyzeImports(file)
+    }
+    
+    if (result.hasChanges) {
+      // Apply changes
+      applyImportChanges(editor, result)
+      return result
+    }
+    
+    return false
+  }
+  
+  override fun postExec(data: ActionData, result: Any) {
+    if (result is ImportAnalysisResult && result.hasChanges) {
+      showToast("Organized ${result.changeCount} imports")
+    }
+  }
+  
+  override fun destroy() {
+    // Clean up resources
+    icon = null
+  }
+  
+  private fun analyzeImports(file: File): ImportAnalysisResult {
+    // Analyze and organize imports
+    // ...
+    return ImportAnalysisResult(true, 5)
+  }
+  
+  private fun applyImportChanges(editor: IEditor, result: ImportAnalysisResult) {
+    // Apply the import changes to editor
+    // ...
+  }
+  
+  data class ImportAnalysisResult(
+    val hasChanges: Boolean,
+    val changeCount: Int
+  )
+}
+
+// Register the action
+fun registerOrganizeImports() {
+  val registry = ActionsRegistry.getInstance()
+  val action = OrganizeImportsAction()
+  
+  if (registry.registerAction(action)) {
+    println("Organize Imports action registered")
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Action Performance">
+    - Keep `prepare()` fast - it's called frequently
+    - Use `requiresUIThread = false` for long operations
+    - Return meaningful results from `execAction()`
+    - Clean up resources in `destroy()`
+  </Accordion>
+  
+  <Accordion title="Action State">
+    - Update `visible` and `enabled` in `prepare()`
+    - Don't store mutable state in action instances
+    - Use ActionData to pass context
+  </Accordion>
+  
+  <Accordion title="User Experience">
+    - Provide clear, concise labels
+    - Use subtitles for additional context
+    - Show feedback in `postExec()`
+    - Handle errors gracefully
+  </Accordion>
+</AccordionGroup>
+
+## Related APIs
+
+<CardGroup cols={2}>
+  <Card title="Editor API" icon="code" href="./editor-api">
+    Work with editor instances in actions
+  </Card>
+  
+  <Card title="Project API" icon="folder-tree" href="./project-api">
+    Access project information in actions
+  </Card>
+</CardGroup>

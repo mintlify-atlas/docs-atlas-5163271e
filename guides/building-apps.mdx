@@ -1,0 +1,576 @@
+---
+title: Building Apps
+description: Learn how to build and compile Android applications in Android Code Studio
+icon: hammer
+---
+
+Android Code Studio uses Gradle and the Android Gradle Plugin to build your applications. The IDE provides both UI-based and command-line build options.
+
+## Quick Build
+
+The fastest way to build your app:
+
+<Steps>
+  <Step title="Open Your Project">
+    Ensure your project is fully initialized and synced.
+  </Step>
+
+  <Step title="Start the Build">
+    Tap the **Build** button (hammer icon) in the toolbar, or select **Build → Build APK** from the menu.
+  </Step>
+
+  <Step title="Monitor Progress">
+    The Build Output panel shows real-time build progress and logs.
+  </Step>
+
+  <Step title="Locate Your APK">
+    Once complete, find your APK at:
+    ```
+    app/build/outputs/apk/debug/app-debug.apk
+    ```
+  </Step>
+</Steps>
+
+## Build Variants
+
+Android projects support multiple build variants for different configurations.
+
+### Debug vs Release
+
+<Tabs>
+  <Tab title="Debug Build">
+    Development builds with debugging enabled:
+    
+    ```bash
+    ./gradlew assembleDebug
+    ```
+    
+    **Characteristics:**
+    - Includes debug symbols
+    - Enables logging
+    - Larger APK size
+    - Not optimized
+    - Debuggable flag enabled
+    
+    Output: `app/build/outputs/apk/debug/app-debug.apk`
+  </Tab>
+
+  <Tab title="Release Build">
+    Production-ready builds:
+    
+    ```bash
+    ./gradlew assembleRelease
+    ```
+    
+    **Characteristics:**
+    - Code optimization (ProGuard/R8)
+    - Minified and obfuscated
+    - Smaller APK size
+    - Requires signing configuration
+    - Not debuggable
+    
+    Output: `app/build/outputs/apk/release/app-release.apk`
+    
+    <Warning>
+      Release builds require signing configuration in your `build.gradle` file.
+    </Warning>
+  </Tab>
+</Tabs>
+
+### Build Flavors
+
+Define product flavors for different app versions:
+
+```kotlin title="app/build.gradle.kts"
+android {
+    flavorDimensions += "version"
+    
+    productFlavors {
+        create("free") {
+            dimension = "version"
+            applicationIdSuffix = ".free"
+            versionNameSuffix = "-free"
+        }
+        create("pro") {
+            dimension = "version"
+            applicationIdSuffix = ".pro"
+            versionNameSuffix = "-pro"
+        }
+    }
+}
+```
+
+Build specific flavors:
+
+```bash
+./gradlew assembleFreeDebug
+./gradlew assembleProRelease
+```
+
+## Build System
+
+Android Code Studio uses a custom build implementation optimized for Android devices.
+
+### Build Process
+
+When you trigger a build:
+
+<Steps>
+  <Step title="Prepare Build">
+    - Validates Gradle wrapper
+    - Sets up environment variables
+    - Configures build arguments
+  </Step>
+
+  <Step title="Execute Gradle">
+    Runs the `gradlew` script with specified tasks:
+    
+    ```kotlin title="GradleBuildService.kt:561-577"
+    val projectDir = ProjectManagerImpl.getInstance().projectDir
+    val gradlewPath = File(projectDir, "gradlew").absolutePath
+
+    val command = mutableListOf("sh", gradlewPath)
+    command.addAll(tasks)
+
+    val buildArgs = getBuildArguments().get()
+    command.addAll(buildArgs)
+    ```
+  </Step>
+
+  <Step title="Stream Output">
+    Build logs are streamed in real-time to the Build Output panel.
+  </Step>
+
+  <Step title="Handle Result">
+    On success or failure, the IDE updates the UI and notifies you via notification.
+  </Step>
+</Steps>
+
+### Environment Configuration
+
+The build service configures these environment variables:
+
+```kotlin title="GradleBuildService.kt:584-608"
+// Termux shell environment
+val termuxEnv = TermuxShellEnvironment().getEnvironment(this, false)
+
+// Custom IDE environment
+val customEnv = HashMap<String, String>()
+Environment.putEnvironment(customEnv, false)
+
+// Merge environments
+val finalEnv = processBuilder.environment()
+finalEnv.putAll(termuxEnv)
+finalEnv.putAll(customEnv)
+
+// Ensure PATH includes build tools
+finalEnv["PATH"] = "${Environment.BIN_DIR.absolutePath}:$currentPath"
+finalEnv["LD_LIBRARY_PATH"] = Environment.LIB_DIR.absolutePath
+finalEnv["TMPDIR"] = Environment.TMP_DIR.absolutePath
+```
+
+<Note>
+  The IDE automatically overrides AAPT2 binary path to use the bundled version optimized for Android.
+</Note>
+
+## Build Tasks
+
+### Common Gradle Tasks
+
+<CodeGroup>
+  ```bash Clean Build
+  ./gradlew clean
+  ```
+
+  ```bash Build APK
+  ./gradlew assembleDebug
+  ```
+
+  ```bash Build and Install
+  ./gradlew installDebug
+  ```
+
+  ```bash Run Tests
+  ./gradlew test
+  ```
+
+  ```bash Generate Sources
+  ./gradlew :app:generateDebugSources
+  ```
+
+  ```bash Lint Check
+  ./gradlew lint
+  ```
+</CodeGroup>
+
+### Module-Specific Tasks
+
+For multi-module projects, specify the module:
+
+```bash
+./gradlew :app:assembleDebug
+./gradlew :library:assembleRelease
+./gradlew :feature:bundleDebug
+```
+
+### Resource Generation
+
+The IDE automatically generates sources when needed:
+
+```kotlin title="ProjectManagerImpl.kt:148-200"
+fun generateSources(builder: BuildService?) {
+    val tasks = getWorkspace()
+        ?.androidProjects()
+        ?.flatMap { module ->
+            val variant = module.getSelectedVariant()
+            val mainArtifact = variant.mainArtifact
+            
+            listOf(
+                mainArtifact.resGenTaskName,
+                mainArtifact.sourceGenTaskName,
+                "process${variantName}Resources"
+            ).mapNotNull { "${module.path}:${it}" }
+        }
+    
+    builder.executeTasks(*tasks.toTypedArray())
+}
+```
+
+<Tip>
+  Resource generation runs automatically when you save XML layout files.
+</Tip>
+
+## Build Configuration
+
+### Build Arguments
+
+Customize build behavior with Gradle arguments:
+
+```kotlin title="GradleBuildService.kt:374-417"
+val extraArgs = ArrayList<String>()
+
+// Override AAPT2
+extraArgs.add("-Pandroid.aapt2FromMavenOverride=" + Environment.AAPT2.absolutePath)
+
+// Build options from preferences
+if (BuildPreferences.isStacktraceEnabled) {
+    extraArgs.add("--stacktrace")
+}
+if (BuildPreferences.isInfoEnabled) {
+    extraArgs.add("--info")
+}
+if (BuildPreferences.isDebugEnabled) {
+    extraArgs.add("--debug")
+}
+if (BuildPreferences.isBuildCacheEnabled) {
+    extraArgs.add("--build-cache")
+}
+if (BuildPreferences.isOfflineEnabled) {
+    extraArgs.add("--offline")
+}
+```
+
+Configure these in **Settings → Build Preferences**.
+
+### Gradle Properties
+
+Optimize builds in `gradle.properties`:
+
+```properties title="gradle.properties"
+# Memory allocation
+org.gradle.jvmargs=-Xmx512m -Dfile.encoding=UTF-8
+
+# Parallel execution
+org.gradle.parallel=true
+
+# Build cache
+org.gradle.caching=true
+
+# Daemon
+org.gradle.daemon=true
+
+# AndroidX
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+```
+
+<Warning>
+  Be cautious with memory allocation. Android devices have limited RAM. The default `-Xmx512m` is optimized for most devices.
+</Warning>
+
+## Build Output
+
+Understand build output and logs:
+
+### Success
+
+```
+BUILD SUCCESSFUL in 1m 23s
+45 actionable tasks: 12 executed, 33 up-to-date
+```
+
+Your APK is ready at: `app/build/outputs/apk/debug/app-debug.apk`
+
+### Failure
+
+```
+BUILD FAILED in 45s
+
+* What went wrong:
+Execution failed for task ':app:compileDebugJavaWithJavac'.
+> Compilation failed; see the compiler error output for details.
+```
+
+Check the error details in the Build Output panel.
+
+### Common Build Errors
+
+<AccordionGroup>
+  <Accordion title="OutOfMemoryError">
+    Increase JVM memory allocation:
+    
+    ```properties title="gradle.properties"
+    org.gradle.jvmargs=-Xmx768m -Dfile.encoding=UTF-8
+    ```
+    
+    Or enable offline mode to reduce memory usage:
+    ```bash
+    ./gradlew assembleDebug --offline
+    ```
+  </Accordion>
+
+  <Accordion title="Dependency Resolution Failed">
+    Check your internet connection and try:
+    
+    1. **File → Sync Project with Gradle Files**
+    2. Clear Gradle cache:
+       ```bash
+       ./gradlew clean
+       rm -rf ~/.gradle/caches
+       ```
+    3. Retry the build
+  </Accordion>
+
+  <Accordion title="Compilation Errors">
+    Fix the errors shown in the editor:
+    
+    - Red underlines indicate syntax errors
+    - Hover over errors for details
+    - Use **Code → Show Error Description**
+    - Check the Problems panel for all issues
+  </Accordion>
+
+  <Accordion title="AAPT2 Error">
+    Resource processing failed:
+    
+    1. Check XML files for syntax errors
+    2. Ensure resource names are valid (lowercase, no spaces)
+    3. Verify resource references (`@string/app_name`)
+    4. Clean and rebuild:
+       ```bash
+       ./gradlew clean assembleDebug
+       ```
+  </Accordion>
+</AccordionGroup>
+
+## Signing Configuration
+
+For release builds, configure signing:
+
+```kotlin title="app/build.gradle.kts"
+android {
+    signingConfigs {
+        create("release") {
+            storeFile = file("keystore.jks")
+            storePassword = "your-store-password"
+            keyAlias = "your-key-alias"
+            keyPassword = "your-key-password"
+        }
+    }
+    
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+}
+```
+
+<Warning>
+  Never commit signing credentials to version control. Use environment variables or the `local.properties` file instead.
+</Warning>
+
+### Generate Keystore
+
+Create a keystore in Terminal:
+
+```bash
+keytool -genkey -v -keystore keystore.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -alias myapp
+```
+
+## Build Optimization
+
+### ProGuard/R8
+
+Minify and optimize release builds:
+
+```properties title="proguard-rules.pro"
+# Keep app classes
+-keep class com.example.myapp.** { *; }
+
+# Keep AndroidX
+-keep class androidx.** { *; }
+
+# Remove logging
+-assumenosideeffects class android.util.Log {
+    public static *** d(...);
+    public static *** v(...);
+    public static *** i(...);
+}
+```
+
+### Build Cache
+
+Enable Gradle build cache:
+
+```properties title="gradle.properties"
+org.gradle.caching=true
+```
+
+Or per-build:
+
+```bash
+./gradlew assembleDebug --build-cache
+```
+
+### Incremental Builds
+
+Only modified files are recompiled:
+
+```kotlin title="app/build.gradle.kts"
+android {
+    buildFeatures {
+        // Only enable features you use
+        viewBinding = true
+        dataBinding = false
+        compose = false
+    }
+}
+```
+
+## Build from Terminal
+
+You can also build directly from the integrated Terminal:
+
+<Steps>
+  <Step title="Open Terminal">
+    Tap the Terminal icon in the bottom toolbar.
+  </Step>
+
+  <Step title="Navigate to Project">
+    ```bash
+    cd ~/AndroidIDEProjects/MyProject
+    ```
+  </Step>
+
+  <Step title="Run Gradle Tasks">
+    ```bash
+    ./gradlew assembleDebug
+    ```
+  </Step>
+</Steps>
+
+### Useful Terminal Commands
+
+```bash
+# List all tasks
+./gradlew tasks
+
+# Build with logs
+./gradlew assembleDebug --info
+
+# Clean build
+./gradlew clean assembleDebug
+
+# Profile build
+./gradlew assembleDebug --profile
+
+# Stop Gradle daemons
+./gradlew --stop
+```
+
+## Build Service
+
+The IDE uses a foreground service for builds:
+
+```kotlin title="GradleBuildService.kt:81-82"
+class GradleBuildService : Service(), BuildService, IToolingApiClient {
+    override var isBuildInProgress = false
+```
+
+You'll see a notification during builds:
+
+- **Idle** - No build running
+- **Build in progress** - Build is running
+- **Build successful** - Build completed successfully
+- **Build failed** - Build encountered errors
+
+## Canceling Builds
+
+To cancel a running build:
+
+1. Tap **Cancel Build** in the toolbar
+2. Or from the menu: **Build → Cancel Build**
+
+The IDE will:
+
+```kotlin title="GradleBuildService.kt:687-704"
+override fun cancelCurrentBuild(): CompletableFuture<BuildCancellationRequestResult> {
+    val cancellationFuture = server!!.cancelCurrentBuild()
+    
+    // Force stop Gradle daemons after cancellation
+    buildServiceScope.launch {
+        kotlinx.coroutines.delay(1000)
+        killGradlewProcesses()
+    }
+    
+    return cancellationFuture
+}
+```
+
+<Tip>
+  Cancelled builds clean up gracefully and stop all Gradle daemons.
+</Tip>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Clean Before Release" icon="broom">
+    Always run `./gradlew clean` before building release APKs.
+  </Card>
+
+  <Card title="Use Build Cache" icon="database">
+    Enable build cache to speed up repeated builds significantly.
+  </Card>
+
+  <Card title="Optimize Dependencies" icon="puzzle-piece">
+    Only include dependencies you actually use. Remove unused libraries.
+  </Card>
+
+  <Card title="Monitor Memory" icon="memory">
+    Keep an eye on build memory usage. Lower `-Xmx` if builds crash.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+- [Debug your app](/guides/debugging) to find and fix issues
+- [Configure environment variables](/guides/environment-variables) for custom build settings
+- [Use plugins](/guides/plugins) to extend build functionality

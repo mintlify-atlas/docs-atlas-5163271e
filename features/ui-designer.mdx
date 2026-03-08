@@ -1,0 +1,628 @@
+---
+title: 'UI Designer'
+description: 'Visual drag-and-drop interface for designing Android XML layouts'
+icon: 'paintbrush'
+---
+
+## Overview
+
+Android Code Studio includes a powerful UI Designer that allows you to visually design Android XML layouts using an intuitive drag-and-drop interface. Design layouts directly on your Android device without writing XML code.
+
+## Getting Started
+
+The UI Designer is accessible from the editor when working with Android layout XML files:
+
+```kotlin
+class UIDesignerActivity : BaseIDEActivity() {
+  private val viewModel by viewModels<WorkspaceViewModel>()
+  
+  companion object {
+    const val EXTRA_FILE = "layout_file"
+    
+    fun launch(context: Context, layoutFile: File) {
+      val intent = Intent(context, UIDesignerActivity::class.java)
+      intent.putExtra(EXTRA_FILE, layoutFile)
+      context.startActivity(intent)
+    }
+  }
+}
+```
+
+<Note>
+  Launch the UI Designer by selecting "Open in Designer" from the context menu
+  of any layout XML file.
+</Note>
+
+## Features
+
+<CardGroup cols={2}>
+  <Card title="Drag & Drop" icon="hand-pointer">
+    Drag widgets from palette and drop onto canvas
+  </Card>
+  <Card title="Visual Editing" icon="pen-to-square">
+    Edit view properties through an intuitive interface
+  </Card>
+  <Card title="Widget Hierarchy" icon="sitemap">
+    View and manage the view hierarchy
+  </Card>
+  <Card title="Live Preview" icon="eye">
+    See changes in real-time as you design
+  </Card>
+  <Card title="Attribute Editor" icon="sliders">
+    Comprehensive attribute editing with auto-completion
+  </Card>
+  <Card title="XML Generation" icon="code">
+    Generate clean, formatted XML code
+  </Card>
+</CardGroup>
+
+## Core Components
+
+### Designer Workspace
+
+The main design surface where you build your layout:
+
+```kotlin
+class DesignerWorkspaceFragment : Fragment() {
+  val workspaceView: ViewGroup
+    get() = binding.designerCanvas
+  
+  private fun setupWorkspace() {
+    // Setup canvas
+    workspaceView.setOnDragListener(WidgetDragListener())
+    
+    // Enable touch interactions
+    enableViewSelection()
+    enableViewDragging()
+  }
+  
+  fun addView(widget: View, params: ViewGroup.LayoutParams) {
+    workspaceView.addView(widget, params)
+    refreshHierarchy()
+  }
+}
+```
+
+### Widget Palette
+
+Browsable collection of Android widgets organized by category:
+
+<Tabs>
+  <Tab title="Layouts">
+    - LinearLayout (Horizontal/Vertical)
+    - RelativeLayout
+    - FrameLayout
+    - ConstraintLayout
+    - GridLayout
+    - ScrollView
+  </Tab>
+  <Tab title="Widgets">
+    - TextView
+    - EditText
+    - Button
+    - ImageView
+    - CheckBox
+    - RadioButton
+    - Switch
+    - ProgressBar
+  </Tab>
+  <Tab title="Containers">
+    - CardView
+    - RecyclerView
+    - ViewPager
+    - TabLayout
+    - NavigationView
+    - BottomNavigationView
+  </Tab>
+  <Tab title="Material">
+    - MaterialButton
+    - TextInputLayout
+    - FloatingActionButton
+    - AppBarLayout
+    - Toolbar
+    - BottomAppBar
+  </Tab>
+</Tabs>
+
+### Widget Adapter
+
+```kotlin
+class WidgetsItemAdapter(
+  private val widgets: List<WidgetInfo>
+) : RecyclerView.Adapter<WidgetViewHolder>() {
+  
+  override fun onBindViewHolder(holder: WidgetViewHolder, position: Int) {
+    val widget = widgets[position]
+    holder.bind(widget)
+    
+    // Setup drag behavior
+    holder.itemView.setOnLongClickListener {
+      val dragData = ClipData.newPlainText("widget", widget.className)
+      val shadowBuilder = WidgetDragShadowBuilder(it)
+      it.startDragAndDrop(dragData, shadowBuilder, widget, 0)
+      true
+    }
+  }
+}
+```
+
+## Drag and Drop System
+
+### Widget Touch Listener
+
+```kotlin
+class WidgetTouchListener(
+  private val workspace: ViewGroup
+) : View.OnTouchListener {
+  
+  override fun onTouch(view: View, event: MotionEvent): Boolean {
+    return when (event.action) {
+      MotionEvent.ACTION_DOWN -> {
+        // Prepare for drag
+        val dragShadow = WidgetDragShadowBuilder(view)
+        val data = ClipData.newPlainText("view_id", view.id.toString())
+        view.startDragAndDrop(data, dragShadow, view, 0)
+        true
+      }
+      else -> false
+    }
+  }
+}
+```
+
+### Drag Listener
+
+```kotlin
+class WidgetDragListener(
+  private val workspace: ViewGroup
+) : View.OnDragListener {
+  
+  override fun onDrag(view: View, event: DragEvent): Boolean {
+    return when (event.action) {
+      DragEvent.ACTION_DRAG_STARTED -> true
+      
+      DragEvent.ACTION_DRAG_ENTERED -> {
+        // Highlight drop target
+        view.background = highlightDrawable
+        true
+      }
+      
+      DragEvent.ACTION_DROP -> {
+        // Handle drop
+        val widget = createWidget(event.clipData)
+        val params = calculateLayoutParams(event.x, event.y)
+        workspace.addView(widget, params)
+        true
+      }
+      
+      DragEvent.ACTION_DRAG_ENDED -> {
+        view.background = null
+        true
+      }
+      
+      else -> false
+    }
+  }
+}
+```
+
+### Custom Drag Shadow
+
+```kotlin
+class WidgetDragShadowBuilder(
+  view: View
+) : View.DragShadowBuilder(view) {
+  
+  private val shadow = ColorDrawable(Color.LTGRAY)
+  
+  override fun onProvideShadowMetrics(
+    outShadowSize: Point,
+    outShadowTouchPoint: Point
+  ) {
+    val width = view.width / 2
+    val height = view.height / 2
+    
+    outShadowSize.set(width, height)
+    outShadowTouchPoint.set(width / 2, height / 2)
+  }
+  
+  override fun onDrawShadow(canvas: Canvas) {
+    shadow.setBounds(0, 0, view.width, view.height)
+    shadow.draw(canvas)
+  }
+}
+```
+
+<Tip>
+  Long-press on any widget in the palette to start dragging it to the canvas.
+</Tip>
+
+## Attribute Editing
+
+### View Info Fragment
+
+Display and edit selected view properties:
+
+```kotlin
+class ViewInfoFragment : Fragment() {
+  private var selectedView: View? = null
+  
+  fun setSelectedView(view: View) {
+    selectedView = view
+    displayAttributes(view)
+  }
+  
+  private fun displayAttributes(view: View) {
+    val attrs = extractAttributes(view)
+    binding.attributeList.adapter = ViewAttrListAdapter(attrs) { attr, value ->
+      applyAttribute(view, attr, value)
+    }
+  }
+  
+  private fun applyAttribute(view: View, attr: String, value: String) {
+    when (attr) {
+      "android:text" -> (view as? TextView)?.text = value
+      "android:textSize" -> (view as? TextView)?.textSize = value.toFloat()
+      "android:layout_width" -> updateLayoutParam(view, "width", value)
+      "android:layout_height" -> updateLayoutParam(view, "height", value)
+      // ... more attributes
+    }
+  }
+}
+```
+
+### Attribute Adapter
+
+```kotlin
+class ViewAttrListAdapter(
+  private val attributes: List<Attribute>,
+  private val onAttributeChanged: (String, String) -> Unit
+) : RecyclerView.Adapter<AttrViewHolder>() {
+  
+  override fun onBindViewHolder(holder: AttrViewHolder, position: Int) {
+    val attr = attributes[position]
+    holder.nameText.text = attr.name
+    holder.valueInput.setText(attr.value)
+    
+    holder.valueInput.addTextChangedListener { text ->
+      onAttributeChanged(attr.name, text.toString())
+    }
+  }
+}
+```
+
+### Add Attribute Dialog
+
+```kotlin
+class AddAttrFragment : DialogFragment() {
+  
+  private fun showAttributePicker() {
+    val availableAttrs = listOf(
+      "android:id",
+      "android:text",
+      "android:textColor",
+      "android:textSize",
+      "android:background",
+      "android:padding",
+      "android:margin",
+      "android:layout_width",
+      "android:layout_height",
+      "android:gravity",
+      // ... more attributes
+    )
+    
+    binding.attrList.adapter = AddAttrListAdapter(availableAttrs) { attr ->
+      addAttributeToView(attr)
+      dismiss()
+    }
+  }
+}
+```
+
+<Accordion title="Common Attributes">
+  The attribute editor supports all standard Android view attributes:
+  
+  - **Layout**: width, height, margins, padding, gravity
+  - **Text**: text, textSize, textColor, fontFamily
+  - **Appearance**: background, foreground, elevation
+  - **Behavior**: visibility, enabled, clickable
+  - **Constraints**: layout_constraint* (for ConstraintLayout)
+</Accordion>
+
+## Hierarchy Management
+
+### Show Hierarchy Action
+
+```kotlin
+class ShowHierarchyAction : UiDesignerAction() {
+  override fun execAction(data: ActionData): Boolean {
+    val hierarchy = buildHierarchy(workspace.rootView)
+    showHierarchyDialog(hierarchy)
+    return true
+  }
+  
+  private fun buildHierarchy(view: View): TreeNode {
+    val node = TreeNode(view)
+    if (view is ViewGroup) {
+      for (i in 0 until view.childCount) {
+        node.addChild(buildHierarchy(view.getChildAt(i)))
+      }
+    }
+    return node
+  }
+}
+```
+
+### View Hierarchy
+
+```
+ConstraintLayout
+├── Toolbar
+│   └── TextView (title)
+├── LinearLayout
+│   ├── ImageView
+│   ├── TextView
+│   └── Button
+└── FloatingActionButton
+```
+
+## XML Generation
+
+### View to XML Converter
+
+```kotlin
+object ViewToXml {
+  fun generateXml(
+    context: Context,
+    view: View,
+    onSuccess: (String) -> Unit,
+    onError: (Result<String>, Throwable?) -> Unit
+  ) {
+    try {
+      val xml = StringBuilder()
+      xml.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+      
+      writeView(view, xml, 0)
+      
+      onSuccess(formatXml(xml.toString()))
+    } catch (e: Exception) {
+      onError(Result.failure(e), e)
+    }
+  }
+  
+  private fun writeView(view: View, xml: StringBuilder, indent: Int) {
+    val tag = getXmlTag(view)
+    val attrs = extractAttributes(view)
+    
+    xml.append("  ".repeat(indent))
+    xml.append("<$tag")
+    
+    // Write attributes
+    attrs.forEach { (name, value) ->
+      xml.append("\n")
+      xml.append("  ".repeat(indent + 1))
+      xml.append("$name=\"$value\"")
+    }
+    
+    // Write children
+    if (view is ViewGroup && view.childCount > 0) {
+      xml.append(">\n")
+      
+      for (i in 0 until view.childCount) {
+        writeView(view.getChildAt(i), xml, indent + 1)
+      }
+      
+      xml.append("  ".repeat(indent))
+      xml.append("</$tag>\n")
+    } else {
+      xml.append(" />\n")
+    }
+  }
+}
+```
+
+### Generated XML Example
+
+<Tabs>
+  <Tab title="Simple Layout">
+    ```xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <LinearLayout
+      xmlns:android="http://schemas.android.com/apk/res/android"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:orientation="vertical"
+      android:padding="16dp">
+      
+      <TextView
+        android:id="@+id/title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Hello World"
+        android:textSize="24sp" />
+      
+      <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Click Me" />
+    </LinearLayout>
+    ```
+  </Tab>
+  <Tab title="Complex Layout">
+    ```xml
+    <?xml version="1.0" encoding="utf-8"?>
+    <androidx.constraintlayout.widget.ConstraintLayout
+      xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent">
+      
+      <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent">
+        
+        <androidx.appcompat.widget.Toolbar
+          android:id="@+id/toolbar"
+          android:layout_width="match_parent"
+          android:layout_height="?attr/actionBarSize" />
+      </com.google.android.material.appbar.AppBarLayout>
+      
+      <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/appbar"
+        app:layout_constraintBottom_toBottomOf="parent" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+    ```
+  </Tab>
+</Tabs>
+
+## Designer Actions
+
+### Undo/Redo System
+
+```kotlin
+class UndoAction : UiDesignerAction() {
+  override fun execAction(data: ActionData): Boolean {
+    val viewModel = data.get(WorkspaceViewModel::class.java)
+    return viewModel.undo()
+  }
+}
+
+class RedoAction : UiDesignerAction() {
+  override fun execAction(data: ActionData): Boolean {
+    val viewModel = data.get(WorkspaceViewModel::class.java)
+    return viewModel.redo()
+  }
+}
+```
+
+### Show XML Action
+
+```kotlin
+class ShowXmlAction : UiDesignerAction() {
+  override fun execAction(data: ActionData): Boolean {
+    val workspace = getWorkspace(data)
+    
+    ViewToXml.generateXml(
+      context = data.requireContext(),
+      view = workspace.workspaceView,
+      onSuccess = { xml ->
+        showXmlPreview(xml)
+      },
+      onError = { _, error ->
+        showError("Failed to generate XML: ${error?.message}")
+      }
+    )
+    
+    return true
+  }
+}
+```
+
+<CardGroup cols={2}>
+  <Card title="Undo" icon="rotate-left">
+    Revert the last change to the layout
+  </Card>
+  <Card title="Redo" icon="rotate-right">
+    Reapply an undone change
+  </Card>
+  <Card title="Show XML" icon="code">
+    Preview generated XML code
+  </Card>
+  <Card title="Show Hierarchy" icon="sitemap">
+    View the complete view hierarchy
+  </Card>
+</CardGroup>
+
+## Visual Enhancements
+
+### Layered Foreground
+
+Visual indicator for selected views:
+
+```kotlin
+class UiViewLayeredForeground : Drawable() {
+  private val borderPaint = Paint().apply {
+    style = Paint.Style.STROKE
+    strokeWidth = 4f
+    color = Color.BLUE
+  }
+  
+  private val cornerPaint = Paint().apply {
+    style = Paint.Style.FILL
+    color = Color.BLUE
+  }
+  
+  override fun draw(canvas: Canvas) {
+    // Draw border
+    canvas.drawRect(bounds, borderPaint)
+    
+    // Draw corner handles
+    val handleSize = 16f
+    canvas.drawCircle(bounds.left.toFloat(), bounds.top.toFloat(), 
+                     handleSize, cornerPaint)
+    canvas.drawCircle(bounds.right.toFloat(), bounds.top.toFloat(), 
+                     handleSize, cornerPaint)
+    canvas.drawCircle(bounds.left.toFloat(), bounds.bottom.toFloat(), 
+                     handleSize, cornerPaint)
+    canvas.drawCircle(bounds.right.toFloat(), bounds.bottom.toFloat(), 
+                     handleSize, cornerPaint)
+  }
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Save Frequently" icon="floppy-disk">
+    Generate and save XML regularly to avoid losing work
+  </Card>
+  <Card title="Use Hierarchy" icon="sitemap">
+    Check hierarchy view to ensure proper nesting
+  </Card>
+  <Card title="Test on Device" icon="mobile">
+    Preview layouts on actual device for accurate results
+  </Card>
+  <Card title="Validate XML" icon="check">
+    Review generated XML for correctness
+  </Card>
+</CardGroup>
+
+## Workflow Example
+
+```kotlin
+// 1. Open layout file in designer
+val layoutFile = File(projectDir, "app/src/main/res/layout/activity_main.xml")
+UIDesignerActivity.launch(context, layoutFile)
+
+// 2. User designs layout with drag-and-drop
+// - Drag LinearLayout from palette
+// - Drop onto canvas
+// - Drag TextView and Button into LinearLayout
+// - Edit attributes in property panel
+
+// 3. Generate XML
+ViewToXml.generateXml(context, rootView) { xml ->
+  // 4. Save to file
+  layoutFile.writeText(xml)
+  
+  // 5. Return to editor
+  finish()
+}
+```
+
+<Warning>
+  The UI Designer works best with simple to moderately complex layouts.
+  For very complex layouts with custom views, consider editing XML directly.
+</Warning>
+
+## Related Features
+
+- [Code Editor](/features/code-editor) - Edit XML source directly
+- [Language Servers](/features/language-servers) - XML LSP for intelligent editing
+- [Project Management](/features/project-management) - Layout file management

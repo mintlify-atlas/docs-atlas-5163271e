@@ -1,0 +1,193 @@
+---
+title: Installation
+description: Learn how to install Android Code Studio and set up build tools on your Android device
+---
+
+Android Code Studio is a complete IDE for developing real, Gradle-based Android applications directly on your Android device. This guide will walk you through the installation process.
+
+## System Requirements
+
+Before installing Android Code Studio, ensure your device meets these requirements:
+
+- **Android Version**: Android 8.0 (API 26) or higher
+- **Storage**: At least 4GB of free storage space (build tools require additional space)
+- **RAM**: 4GB or more recommended for optimal performance
+- **Architecture**: ARM or ARM64 processor
+
+<Note>
+Android Code Studio requires significant storage space due to the Android SDK, build tools, and JDK installations. Ensure you have adequate free space before proceeding.
+</Note>
+
+## Required Permissions
+
+Android Code Studio requires the following permissions to function properly:
+
+- **Storage Access** (`MANAGE_EXTERNAL_STORAGE`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`) - For accessing and managing project files
+- **Internet Access** (`INTERNET`, `ACCESS_NETWORK_STATE`) - For downloading dependencies and build tools
+- **Install Packages** (`REQUEST_INSTALL_PACKAGES`) - For installing built APKs
+- **Foreground Service** (`FOREGROUND_SERVICE`) - For running builds in the background
+- **Post Notifications** (`POST_NOTIFICATIONS`) - For build status notifications
+- **Read Logs** (`READ_LOGS`) - For viewing application logs
+
+<Warning>
+Android Code Studio must be installed from trusted sources only. Only download the APK from the official GitHub releases page to ensure security and authenticity.
+</Warning>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Download the APK">
+    Visit the [official GitHub releases page](https://github.com/Mohammed-baqer-null/android-code-studio/releases) and download the latest Android Code Studio APK file.
+    
+    <Note>
+    Do not download from third-party sources. Only use the official GitHub repository to avoid modified or malicious versions.
+    </Note>
+  </Step>
+
+  <Step title="Enable Unknown Sources">
+    If this is your first time installing an APK from outside the Play Store:
+    
+    1. Open your device **Settings**
+    2. Navigate to **Security** or **Privacy**
+    3. Enable **Install from Unknown Sources** or **Install Unknown Apps**
+    4. Grant permission to your file manager or browser to install apps
+    
+    <Note>
+    The exact location of this setting varies by device manufacturer and Android version.
+    </Note>
+  </Step>
+
+  <Step title="Install the APK">
+    1. Open your file manager and navigate to your **Downloads** folder
+    2. Tap on the Android Code Studio APK file
+    3. Review the requested permissions
+    4. Tap **Install**
+    5. Wait for the installation to complete
+    6. Tap **Open** or find Android Code Studio in your app drawer
+  </Step>
+
+  <Step title="Grant Storage Permissions">
+    When you first launch Android Code Studio:
+    
+    1. The app will request storage permissions
+    2. Tap **Allow** or **Grant** when prompted
+    3. On Android 11+, you may need to enable **All files access** in settings
+    
+    <Warning>
+    Storage permissions are essential for Android Code Studio to access and manage your project files. The app cannot function properly without these permissions.
+    </Warning>
+  </Step>
+
+  <Step title="Install Build Tools">
+    After launching the app for the first time, you need to install the Android build tools:
+    
+    1. Android Code Studio will display an onboarding screen
+    2. Follow the prompts to initialize the environment
+    3. The app will download and install required components:
+       - JDK 17 (Java Development Kit)
+       - Android SDK command-line tools
+       - Build tools and platform tools
+       - Essential packages for compilation
+    
+    This process may take 10-30 minutes depending on your internet connection.
+    
+    <Tip>
+    For detailed build tools setup instructions, visit the [official setup guide](https://docs.androidide.com/tutorials/get-started.html).
+    </Tip>
+  </Step>
+
+  <Step title="Complete Initial Setup">
+    After the build tools installation:
+    
+    1. Configure your workspace directory (default is `/sdcard/AndroidCodeStudio/`)
+    2. Review and accept the licenses for Android SDK components
+    3. Wait for the IDE to initialize
+    4. The main screen will appear when setup is complete
+    
+    <Note>
+    The first launch may take several minutes as the IDE initializes and configures all components.
+    </Note>
+  </Step>
+</Steps>
+
+## Post-Installation Configuration
+
+### JDK Setup
+
+Android Code Studio includes both JDK 11 and JDK 17. The IDE automatically selects the appropriate JDK based on your project requirements.
+
+### Terminal Access
+
+Android Code Studio includes a built-in terminal emulator with essential packages. You can access it from the main menu to:
+
+- Run Gradle commands manually
+- Manage SDK and NDK components via `sdkmanager`
+- Execute Git commands
+- Install additional packages
+
+### Environment Variables
+
+You can configure custom environment variables for builds and terminal sessions:
+
+1. Open **Settings** from the main menu
+2. Navigate to **Build & Run** > **Environment Variables**
+3. Add or modify variables as needed
+
+<Tip>
+Custom environment variables are useful for configuring build properties, setting proxy servers, or defining custom paths.
+</Tip>
+
+## Updating Android Code Studio
+
+To update to a newer version:
+
+<Steps>
+  <Step title="Download Latest Release">
+    Visit the [GitHub releases page](https://github.com/Mohammed-baqer-null/android-code-studio/releases) and download the latest APK.
+  </Step>
+
+  <Step title="Install Update">
+    Tap the downloaded APK and install it over your existing installation. Your projects and settings will be preserved.
+  </Step>
+
+  <Step title="Update Build Tools">
+    If prompted, update build tools and SDK components through the app's update mechanism or via terminal using `sdkmanager`.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Installation Failed
+
+If the APK installation fails:
+
+- Ensure you have sufficient storage space (at least 4GB free)
+- Check that you've enabled installation from unknown sources
+- Try uninstalling any previous version and performing a clean install
+- Verify the APK file is not corrupted by re-downloading
+
+### Build Tools Installation Issues
+
+If build tools fail to install:
+
+- Check your internet connection
+- Ensure you have sufficient storage space (build tools require 2-3GB)
+- Try clearing the app cache and retrying
+- Check the terminal for specific error messages
+
+### Permission Denied Errors
+
+If you encounter permission errors:
+
+- Verify storage permissions are granted in system settings
+- On Android 11+, ensure "All files access" is enabled
+- Try restarting the app after granting permissions
+- Check if battery optimization is interfering with the app
+
+<Tip>
+For additional support, join the [Telegram community](https://t.me/rv2ide) or report issues on the [GitHub repository](https://github.com/Mohammed-baqer-null/android-code-studio/issues).
+</Tip>
+
+## Next Steps
+
+Now that you have Android Code Studio installed, proceed to the [Quickstart Guide](/quickstart) to create and build your first Android project.

@@ -1,0 +1,650 @@
+---
+title: 'Language Servers'
+description: 'LSP implementation for Java, Kotlin, and XML with intelligent code features'
+icon: 'brain'
+---
+
+## Overview
+
+Android Code Studio implements the Language Server Protocol (LSP) for Java, Kotlin, and XML, providing intelligent code features like completion, diagnostics, navigation, and refactoring directly on Android devices.
+
+## Architecture
+
+The LSP implementation consists of several key components:
+
+<CardGroup cols={2}>
+  <Card title="Compiler Services" icon="microchip">
+    Java and Kotlin compiler integration for semantic analysis
+  </Card>
+  <Card title="Language Servers" icon="server">
+    LSP servers for Java, Kotlin, and XML
+  </Card>
+  <Card title="Language Client" icon="desktop">
+    Editor integration for LSP features
+  </Card>
+  <Card title="Providers" icon="puzzle-piece">
+    Feature-specific providers for completion, navigation, etc.
+  </Card>
+</CardGroup>
+
+## Java Language Server
+
+### Compiler Service
+
+The `JavaCompilerService` provides Java compilation and analysis:
+
+```java
+public class JavaCompilerService {
+  private final ModuleProject module;
+  private final JavaCompiler compiler;
+  private final SourceFileManager fileManager;
+  
+  public JavaCompilerService(ModuleProject module) {
+    this.module = module;
+    this.compiler = ToolProvider.getSystemJavaCompiler();
+    this.fileManager = new SourceFileManager(
+      compiler.getStandardFileManager(null, null, null)
+    );
+  }
+  
+  // Compile files
+  public CompileTask compile(List<File> files) {
+    return new CompileTask(compiler, fileManager, files);
+  }
+  
+  // Parse single file
+  public ParseTask parse(File file) {
+    return new ParseTask(compiler, fileManager, file);
+  }
+  
+  public void destroy() {
+    // Cleanup resources
+  }
+}
+```
+
+### Compiler Provider
+
+The `JavaCompilerProvider` manages compiler instances per module:
+
+```java
+public class JavaCompilerProvider {
+  private static JavaCompilerProvider sInstance;
+  private final Map<ModuleProject, JavaCompilerService> mCompilers = 
+    new ConcurrentHashMap<>();
+  
+  // Get compiler for module
+  @NonNull
+  public static JavaCompilerService get(ModuleProject module) {
+    return JavaCompilerProvider.getInstance().forModule(module);
+  }
+  
+  public static JavaCompilerProvider getInstance() {
+    if (sInstance == null) {
+      sInstance = new JavaCompilerProvider();
+    }
+    return sInstance;
+  }
+  
+  @NonNull
+  public synchronized JavaCompilerService forModule(ModuleProject module) {
+    final JavaCompilerService cached = mCompilers.get(module);
+    if (cached != null && cached.getModule() != null) {
+      return cached;
+    }
+    
+    final JavaCompilerService newInstance = 
+      new JavaCompilerService(module);
+    mCompilers.put(module, newInstance);
+    return newInstance;
+  }
+}
+```
+
+### Usage Example
+
+```kotlin
+// Get compiler for current module
+val module = workspace.findModuleForFile(file)
+val compiler = JavaCompilerProvider.get(module)
+
+// Parse file for analysis
+val parseTask = compiler.parse(file)
+val compilationUnit = parseTask.root
+
+// Analyze code
+val trees = parseTask.trees
+val elements = parseTask.elements
+```
+
+<Note>
+  Each module has its own compiler instance to ensure proper classpath
+  isolation and accurate code analysis.
+</Note>
+
+## LSP Features
+
+### Code Completion
+
+The `CompletionProvider` offers intelligent code suggestions:
+
+```java
+public class CompletionProvider {
+  public List<CompletionItem> complete(
+    File file,
+    int line,
+    int column
+  ) {
+    // Parse file
+    ParseTask task = compiler.parse(file);
+    
+    // Find completions at cursor
+    FindCompletionsAt visitor = new FindCompletionsAt(
+      line, column
+    );
+    visitor.scan(task.root, null);
+    
+    return visitor.getCompletionItems();
+  }
+}
+```
+
+### Completion Types
+
+<Tabs>
+  <Tab title="Member Completion">
+    ```java
+    class MyClass {
+      public void myMethod() {
+        String str = "hello";
+        str. // Shows: length(), substring(), charAt(), etc.
+      }
+    }
+    ```
+    
+    Provides:
+    - Instance methods
+    - Fields
+    - Inherited members
+  </Tab>
+  <Tab title="Type Completion">
+    ```java
+    import java.util.*;
+    
+    class MyClass {
+      private ArrayL // Shows: ArrayList, ArrayListIterator, etc.
+    }
+    ```
+    
+    Provides:
+    - Classes from classpath
+    - Imported types
+    - Package-private types
+  </Tab>
+  <Tab title="Keyword Completion">
+    ```java
+    class MyClass {
+      pub // Shows: public, protected
+      
+      public st // Shows: static, strictfp
+    }
+    ```
+    
+    Provides:
+    - Java keywords
+    - Modifiers
+    - Contextual keywords
+  </Tab>
+  <Tab title="Override Completion">
+    ```java
+    class MyClass extends BaseClass {
+      @Override
+      pub // Shows overridable methods from BaseClass
+    }
+    ```
+    
+    Provides:
+    - Methods to override
+    - Complete method signature
+    - Documentation
+  </Tab>
+</Tabs>
+
+### Go to Definition
+
+Navigate to symbol definitions:
+
+```java
+public class DefinitionProvider {
+  public Location findDefinition(
+    File file,
+    int line,
+    int column
+  ) {
+    ParseTask task = compiler.parse(file);
+    
+    // Find name at cursor
+    FindNameAt visitor = new FindNameAt(line, column);
+    visitor.scan(task.root, null);
+    
+    Tree nameTree = visitor.getName();
+    if (nameTree == null) return null;
+    
+    // Resolve to definition
+    Element element = trees.getElement(nameTree);
+    if (element == null) return null;
+    
+    // Get definition location
+    TreePath path = trees.getPath(element);
+    return getLocation(path);
+  }
+}
+```
+
+### Find References
+
+Locate all references to a symbol:
+
+```java
+public class ReferenceProvider {
+  public List<Location> findReferences(
+    File file,
+    int line,
+    int column
+  ) {
+    // Find element at cursor
+    Element element = findElementAt(file, line, column);
+    
+    // Search all files in module
+    List<Location> references = new ArrayList<>();
+    for (File sourceFile : module.getSourceFiles()) {
+      FindReferences visitor = new FindReferences(element);
+      ParseTask task = compiler.parse(sourceFile);
+      visitor.scan(task.root, null);
+      references.addAll(visitor.getReferences());
+    }
+    
+    return references;
+  }
+}
+```
+
+### Signature Help
+
+Display method signatures during typing:
+
+```java
+public class SignatureProvider {
+  public SignatureHelp signatureHelp(
+    File file,
+    int line,
+    int column
+  ) {
+    ParseTask task = compiler.parse(file);
+    
+    // Find method invocation
+    FindInvocationAt visitor = new FindInvocationAt(line, column);
+    visitor.scan(task.root, null);
+    
+    MethodInvocationTree invocation = visitor.getInvocation();
+    if (invocation == null) return null;
+    
+    // Get method overloads
+    List<ExecutableElement> methods = findMethods(invocation);
+    
+    // Build signature help
+    return buildSignatureHelp(methods, getCurrentParam(invocation));
+  }
+}
+```
+
+### Diagnostics
+
+Provide real-time error and warning feedback:
+
+```java
+public class DiagnosticsProvider {
+  public List<Diagnostic> analyze(File file) {
+    // Compile file
+    CompileTask task = compiler.compile(List.of(file));
+    
+    // Collect diagnostics
+    List<Diagnostic> diagnostics = new ArrayList<>();
+    for (javax.tools.Diagnostic<?> d : task.getDiagnostics()) {
+      diagnostics.add(new Diagnostic(
+        d.getMessage(null),
+        mapSeverity(d.getKind()),
+        new Range(
+          (int) d.getLineNumber(),
+          (int) d.getColumnNumber(),
+          (int) d.getLineNumber(),
+          (int) d.getColumnNumber() + 1
+        )
+      ));
+    }
+    
+    return diagnostics;
+  }
+}
+```
+
+<Accordion title="Diagnostic Types">
+  The Java LSP provides various diagnostic types:
+  
+  - **Syntax Errors**: Missing semicolons, braces, etc.
+  - **Type Errors**: Incompatible types, missing casts
+  - **Import Errors**: Unresolved imports
+  - **Warnings**: Unused variables, deprecated API usage
+  - **Suggestions**: Code style recommendations
+</Accordion>
+
+## Code Actions
+
+The Java LSP provides quick fixes and refactorings:
+
+<CardGroup cols={2}>
+  <Card title="Add Import" icon="file-import">
+    Automatically add missing import statements
+  </Card>
+  <Card title="Implement Methods" icon="code">
+    Generate stubs for abstract methods
+  </Card>
+  <Card title="Remove Unused" icon="trash">
+    Remove unused imports, methods, or classes
+  </Card>
+  <Card title="Add Exception" icon="triangle-exclamation">
+    Add throws clause for unhandled exceptions
+  </Card>
+  <Card title="Suppress Warnings" icon="eye-slash">
+    Add @SuppressWarnings annotation
+  </Card>
+  <Card title="Create Method" icon="plus">
+    Generate missing methods
+  </Card>
+</CardGroup>
+
+### Code Action Examples
+
+<Tabs>
+  <Tab title="Add Import">
+    ```java
+    // Before
+    public class MyClass {
+      private ArrayList list; // Error: Cannot resolve ArrayList
+    }
+    
+    // After quick fix
+    import java.util.ArrayList;
+    
+    public class MyClass {
+      private ArrayList list;
+    }
+    ```
+  </Tab>
+  <Tab title="Implement Methods">
+    ```java
+    // Before
+    public class MyClass implements Runnable {
+      // Error: Must implement run()
+    }
+    
+    // After quick fix
+    public class MyClass implements Runnable {
+      @Override
+      public void run() {
+        // TODO: Implement this method
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Add Exception">
+    ```java
+    // Before
+    public void readFile() {
+      Files.readString(Path.of("file.txt")); // Error: Unhandled IOException
+    }
+    
+    // After quick fix
+    public void readFile() throws IOException {
+      Files.readString(Path.of("file.txt"));
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Kotlin Language Server
+
+Kotlin LSP implementation with compiler integration:
+
+```java
+public class KotlinCompilerService {
+  private final KotlinCoreEnvironment environment;
+  private final ModuleProject module;
+  
+  public KotlinCompilerService(ModuleProject module) {
+    this.module = module;
+    this.environment = createEnvironment(module);
+  }
+  
+  public KtFile parse(File file) {
+    String content = Files.readString(file.toPath());
+    return KotlinPsiFactory.createFile(
+      environment.getProject(),
+      file.getName(),
+      content
+    );
+  }
+  
+  public AnalysisResult analyze(List<KtFile> files) {
+    return AnalyzerFacadeForJVM.analyzeFilesWithJavaIntegration(
+      environment.getProject(),
+      files,
+      /* ... */
+    );
+  }
+}
+```
+
+<Note>
+  The Kotlin LSP leverages the official Kotlin compiler for accurate analysis
+  and supports all Kotlin language features including coroutines and extension
+  functions.
+</Note>
+
+## XML Language Server
+
+XML LSP for Android layout files:
+
+### XML Formatting
+
+```java
+public class XMLFormatter {
+  public List<TextEdit> format(Document document) {
+    List<TextEdit> edits = new ArrayList<>();
+    
+    // Format elements
+    DOMElementFormatter elementFormatter = 
+      new DOMElementFormatter();
+    elementFormatter.format(document, edits);
+    
+    // Format attributes
+    DOMAttributeFormatter attrFormatter = 
+      new DOMAttributeFormatter();
+    attrFormatter.format(document, edits);
+    
+    return edits;
+  }
+}
+```
+
+### XML Features
+
+<Tabs>
+  <Tab title="Tag Completion">
+    Complete Android view tags:
+    ```xml
+    <LinearLayout>
+      <Text <!-- Shows: TextView, TextInputLayout, etc. -->
+    </LinearLayout>
+    ```
+  </Tab>
+  <Tab title="Attribute Completion">
+    Complete view attributes:
+    ```xml
+    <TextView
+      android:layout_ <!-- Shows: layout_width, layout_height, etc. -->
+    ```
+  </Tab>
+  <Tab title="Resource References">
+    Complete resource references:
+    ```xml
+    <TextView
+      android:text="@string/ <!-- Shows string resources -->
+    ```
+  </Tab>
+  <Tab title="Format Document">
+    Format XML with proper indentation:
+    ```xml
+    <!-- Before -->
+    <LinearLayout><TextView android:text="Hello"/></LinearLayout>
+    
+    <!-- After -->
+    <LinearLayout>
+      <TextView
+        android:text="Hello" />
+    </LinearLayout>
+    ```
+  </Tab>
+</Tabs>
+
+## Performance Optimization
+
+### Caching
+
+The LSP implementation includes intelligent caching:
+
+```kotlin
+class CachingProject : ModuleProject {
+  private val parseCache = ConcurrentHashMap<File, ParseTask>()
+  private val completionCache = ConcurrentHashMap<String, List<CompletionItem>>()
+  
+  fun getCachedParse(file: File): ParseTask? {
+    return parseCache[file]
+  }
+  
+  fun cacheParse(file: File, task: ParseTask) {
+    parseCache[file] = task
+  }
+  
+  fun invalidateCache(file: File) {
+    parseCache.remove(file)
+    completionCache.clear()
+  }
+}
+```
+
+### Incremental Compilation
+
+```kotlin
+class IncrementalCompiler {
+  fun compileIncremental(
+    changedFiles: List<File>,
+    previousBatch: CompileBatch
+  ): CompileBatch {
+    // Only recompile affected files
+    val affectedFiles = findAffectedFiles(changedFiles)
+    return compile(affectedFiles)
+  }
+}
+```
+
+<Tip>
+  The LSP uses incremental compilation and aggressive caching to minimize
+  latency and battery usage on Android devices.
+</Tip>
+
+## AST Visitors
+
+Custom tree visitors for code analysis:
+
+```java
+// Find variables in scope
+public class FindVariablesBetween extends TreePathScanner<Void, Void> {
+  private final int startLine;
+  private final int endLine;
+  private final List<VariableElement> variables = new ArrayList<>();
+  
+  @Override
+  public Void visitVariable(VariableTree node, Void unused) {
+    long line = getLine(node);
+    if (line >= startLine && line <= endLine) {
+      Element element = trees.getElement(getCurrentPath());
+      if (element instanceof VariableElement) {
+        variables.add((VariableElement) element);
+      }
+    }
+    return super.visitVariable(node, unused);
+  }
+  
+  public List<VariableElement> getVariables() {
+    return variables;
+  }
+}
+```
+
+### Common Visitors
+
+<CardGroup cols={2}>
+  <Card title="FindCompletionsAt" icon="list">
+    Find completion candidates at cursor position
+  </Card>
+  <Card title="FindReferences" icon="link">
+    Locate all references to a symbol
+  </Card>
+  <Card title="FindTypeDeclarations" icon="shapes">
+    Find class, interface, enum declarations
+  </Card>
+  <Card title="FindMethodCallAt" icon="phone">
+    Find method invocation at position
+  </Card>
+</CardGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Compiler Provider" icon="factory">
+    Always get compilers through the provider for proper caching
+  </Card>
+  <Card title="Cache Parse Results" icon="database">
+    Cache AST for frequently accessed files
+  </Card>
+  <Card title="Dispose Resources" icon="trash">
+    Call destroy() on compiler services when done
+  </Card>
+  <Card title="Handle Errors" icon="shield">
+    Gracefully handle compilation and parse errors
+  </Card>
+</CardGroup>
+
+## Integration with Editor
+
+```kotlin
+// Set language server in editor
+val languageServer = getLanguageServerForFile(file)
+editor.setLanguageServer(languageServer)
+
+// Request completions
+editor.requireAutoComplete()
+
+// Navigate to definition
+editor.findDefinition()
+
+// Show signature help
+editor.signatureHelp()
+```
+
+## Related Features
+
+- [Code Editor](/features/code-editor) - Editor integration
+- [Project Management](/features/project-management) - Module and classpath management
+- [AI Agent](/features/ai-agent) - AI-powered code assistance

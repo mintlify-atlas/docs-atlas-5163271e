@@ -1,0 +1,309 @@
+---
+title: SDK Manager
+description: Manage Android SDK packages, build tools, and platform versions
+icon: box
+---
+
+The SDK Manager in Android Code Studio allows you to download, install, update, and manage Android SDK components required for building Android applications.
+
+## Overview
+
+The SDK Manager provides access to:
+
+- Android platform versions (API levels)
+- Android SDK Build Tools
+- Android SDK Platform Tools
+- System images for emulators
+- Additional libraries and components
+
+<Note>
+SDK components are downloaded and installed within the app's data directory, optimized for Android device constraints.
+</Note>
+
+## Accessing SDK Manager
+
+You can access the SDK Manager through:
+
+1. **Settings Menu** - Navigate to Settings > SDK Manager
+2. **Tools Menu** - Select Tools > SDK Manager from the main menu
+3. **Initial Setup** - The SDK Manager runs automatically during first-time setup
+
+## SDK Components
+
+### Android Platforms
+
+Android platform packages contain the Android framework APIs for specific API levels:
+
+<CodeGroup>
+```bash Available Platforms
+Android 14 (API 34)
+Android 13 (API 33)
+Android 12 (API 31/32)
+Android 11 (API 30)
+Android 10 (API 29)
+```
+
+```bash Platform Contents
+- android.jar (Framework APIs)
+- Framework resources
+- AIDL files
+- Build configuration
+```
+</CodeGroup>
+
+<Tip>
+Install the platform version that matches your app's `targetSdkVersion` to ensure proper compilation.
+</Tip>
+
+### Build Tools
+
+Build Tools are required for compiling and building Android applications:
+
+```bash Build Tools Components
+- aapt2 (Resource compiler)
+- d8/r8 (Dex compiler/optimizer)
+- zipalign (APK optimization)
+- apksigner (APK signing)
+```
+
+**Recommended versions:**
+- Latest stable: 34.0.0
+- Minimum supported: 30.0.0
+
+### Platform Tools
+
+Platform tools include ADB and other essential utilities:
+
+```bash Platform Tools
+- adb (Android Debug Bridge)
+- fastboot
+- systrace
+```
+
+## Installing SDK Components
+
+<Steps>
+  <Step title="Open SDK Manager">
+    Navigate to Settings > SDK Manager or Tools > SDK Manager
+  </Step>
+  
+  <Step title="Browse Available Packages">
+    View available SDK platforms, build tools, and other components
+  </Step>
+  
+  <Step title="Select Packages">
+    Check the boxes next to the packages you want to install
+  </Step>
+  
+  <Step title="Install">
+    Tap "Install" or "Apply" to download and install selected packages
+  </Step>
+  
+  <Step title="Wait for Download">
+    Monitor the download and installation progress
+  </Step>
+</Steps>
+
+<Warning>
+SDK downloads can be large (100MB - 1GB+ per platform). Ensure you have sufficient storage space and a stable internet connection.
+</Warning>
+
+## Managing Installed Packages
+
+### Viewing Installed Packages
+
+Check which SDK components are currently installed:
+
+- View installed platforms and their API levels
+- Check build tools versions
+- Review available disk space
+
+### Updating Packages
+
+Keep your SDK components up to date:
+
+<Steps>
+  <Step title="Check for Updates">
+    Open SDK Manager to see if updates are available
+  </Step>
+  
+  <Step title="Select Updates">
+    Updates are typically marked with an "Update Available" indicator
+  </Step>
+  
+  <Step title="Apply Updates">
+    Install updates to get the latest tools and bug fixes
+  </Step>
+</Steps>
+
+### Uninstalling Packages
+
+Remove unused SDK components to free up storage:
+
+<Warning>
+Do not uninstall SDK platforms or build tools that are required by your current projects.
+</Warning>
+
+## SDK Locations
+
+The Android SDK is installed in the app's private directory:
+
+```bash SDK Directory Structure
+$PREFIX/android-sdk/
+├── platforms/
+│   ├── android-33/
+│   ├── android-34/
+│   └── ...
+├── build-tools/
+│   ├── 33.0.2/
+│   ├── 34.0.0/
+│   └── ...
+├── platform-tools/
+└── tools/
+```
+
+<Note>
+The exact path depends on your installation. The IDE automatically configures SDK paths.
+</Note>
+
+## SDK Environment Variables
+
+The IDE sets up the following environment variables:
+
+```bash Environment Setup
+export ANDROID_HOME=$PREFIX/android-sdk
+export ANDROID_SDK_ROOT=$PREFIX/android-sdk
+export PATH=$PATH:$ANDROID_SDK_ROOT/platform-tools
+export PATH=$PATH:$ANDROID_SDK_ROOT/build-tools/latest
+```
+
+## Command Line Access
+
+You can also manage SDK components using command-line tools in the terminal:
+
+<CodeGroup>
+```bash List Installed Packages
+sdkmanager --list_installed
+```
+
+```bash List Available Packages  
+sdkmanager --list
+```
+
+```bash Install Package
+sdkmanager "platforms;android-34"
+sdkmanager "build-tools;34.0.0"
+```
+
+```bash Update All Packages
+sdkmanager --update
+```
+</CodeGroup>
+
+## Troubleshooting
+
+### Download Failures
+
+If SDK downloads fail:
+
+<Steps>
+  <Step title="Check Internet Connection">
+    Ensure you have a stable internet connection
+  </Step>
+  
+  <Step title="Check Storage Space">
+    Verify sufficient free storage (at least 2-3GB recommended)
+  </Step>
+  
+  <Step title="Retry Download">
+    Try downloading again - downloads can resume if interrupted
+  </Step>
+  
+  <Step title="Clear Cache">
+    Clear the app cache if persistent issues occur
+  </Step>
+</Steps>
+
+### Missing SDK Components
+
+If builds fail due to missing SDK components:
+
+```bash Error Messages
+Failed to find Platform SDK with path: platforms/android-34
+Failed to find Build Tools revision 34.0.0
+```
+
+**Solution:**
+1. Note the required component from the error message
+2. Open SDK Manager
+3. Install the missing component
+4. Rebuild your project
+
+### Corrupted Installation
+
+If SDK installations are corrupted:
+
+<Warning>
+Back up your projects before reinstalling SDK components.
+</Warning>
+
+```bash Terminal Cleanup
+# Remove corrupted SDK directory
+rm -rf $PREFIX/android-sdk
+
+# Reinstall through SDK Manager
+# Open SDK Manager and reinstall required components
+```
+
+### Permission Errors
+
+If you encounter permission errors:
+
+```bash Fix Permissions
+# Ensure SDK directories have correct permissions
+chmod -R 755 $PREFIX/android-sdk
+```
+
+## Best Practices
+
+<Tip>
+**Storage Management**
+- Only install platforms you actively use
+- Remove old build tools versions
+- Keep at least 1-2GB free space for builds
+
+**Updates**
+- Check for SDK updates monthly
+- Update build tools for latest optimizations
+- Read release notes before updating
+
+**Project Configuration**
+- Match SDK version with targetSdkVersion
+- Use recent build tools for best performance
+- Document required SDK versions in project README
+</Tip>
+
+## Recommended Setup
+
+For most Android development projects:
+
+```gradle Typical Requirements
+android {
+    compileSdk 34
+    buildToolsVersion "34.0.0"
+    
+    defaultConfig {
+        minSdk 24
+        targetSdk 34
+    }
+}
+```
+
+**Required SDK components:**
+- Platform: Android 14 (API 34)
+- Build Tools: 34.0.0 or later
+- Platform Tools: Latest version
+
+<Note>
+The SDK Manager intelligently suggests required components based on your project configuration.
+</Note>
